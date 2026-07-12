@@ -6,8 +6,10 @@ KERNEL_VERSION=$(echo $(make kernelversion) | grep -Eo '[0-9]+\.[0-9]+\.[0-9]+' 
 TOOLCHAIN_DIR=$KERNEL_DIR/toolchain
 CLANG_DIR=$TOOLCHAIN_DIR/clang
 GCC_DIR=$TOOLCHAIN_DIR/gcc
+DEFCONFIG_DIR=$KERNEL_DIR/arch/arm64/configs
 # Hardcode these variable if you don't want prompt
 DEFCONFIG=
+CUSTOM_DEFCONFIG=
 
 # Function to detect OS and install dependencies
 install_dependencies () {
@@ -42,7 +44,7 @@ fi
 get_gcc() {
     echo "Downloading scripts..."
     if [ ! -f "get_gcc.sh" ]; then 
-     if ! curl -L https://raw.githubusercontent.com/Tam97123/NON_GKI_scripts/refs/heads/main/get_gcc.sh; then
+     if ! curl -Lo https://raw.githubusercontent.com/Tam97123/NON_GKI_scripts/refs/heads/main/get_gcc.sh; then
       echo "Error: Can not download the file! Exiting..."
       exit 1
      fi
@@ -50,10 +52,38 @@ get_gcc() {
     chmod +x get_gcc.sh && source ./get_gcc.sh
 }
 
+build_gcc () {
+    export CROSS_COMPILE="${GCC_DIR}/aarch64/bin/aarch64-linux-android-"
+    export CROSS_COMPILE_ARM32="${GCC_DIR}/arm32/bin/arm-linux-androideabi-"
+    export BUILD_OPTIONS=(
+     -C "${KERNEL_DIR}"
+     O="${KERNEL_DIR}/out"
+     -j"$(nproc)"
+     ARCH=arm64
+     CROSS_COMPILE="${CROSS_COMPILE}"
+     CROSS_COMPILE_ARM32="${CROSS_COMPILE_ARM32}"
+     CC="ccache ${CLANG_DIR}/bin/clang"
+     CLANG_TRIPLE=aarch64-linux-gnu-
+    )
+}
+
+build_without_gcc () {
+    export CROSS_COMPILE="${GCC_DIR}/aarch64/bin/aarch64-linux-android-"
+    export CROSS_COMPILE_ARM32="${GCC_DIR}/arm32/bin/arm-linux-androideabi-"
+    export BUILD_OPTIONS=(
+     -C "${KERNEL_DIR}"
+     O="${KERNEL_DIR}/out"
+     -j"$(nproc)"
+     ARCH=arm64
+     CC="ccache ${CLANG_DIR}/bin/clang"
+     CLANG_TRIPLE=aarch64-linux-gnu-
+    )
+}
+
 get_clang () {
     echo "Downloading scripts..."
     if [ ! -f "get_clang.sh" ]; then 
-     if ! curl -L https://raw.githubusercontent.com/Tam97123/NON_GKI_scripts/refs/heads/main/get_clang.sh; then
+     if ! curl -Lo https://raw.githubusercontent.com/Tam97123/NON_GKI_scripts/refs/heads/main/get_clang.sh; then
       echo "Error: Can not download the file! Exiting..."
       exit 1
      fi
@@ -69,10 +99,24 @@ fi
 VERSION=$(echo "$KERNEL_VERSION" | cut -d. -f1)
 PATCH_LEVEL=$(echo "$KERNEL_VERSION" | cut -d. -f2)
 
-if [ -z $DEFCONFIG ]; then
+if [ $VERSION = "4" ]; then
+ build_gcc
+ if [ ! -d "$GCC_DIR" ]; then
+  get_gcc
+ fi
+elif [[ $VERSION = "5" && $PATCH_LEVEL = "4" ]]; then
+ build_gcc
+ if [ ! -d "$GCC_DIR" ]; then
+  get_gcc
+ fi
+else
+ build_without_gcc
+fi
+
+if [ -z "$DEFCONFIG" ]; then
  while true; do
- if read -t 10 -p "Enter defconfig you prefer: " DEFCONFIG; then
-  if [ -n $(find "$KERNEL_DIR/arch/arm64/configs" -type f -name "$DEFCONFIG") ]; then
+ if read -t 10 -p "Enter defconfig: " DEFCONFIG || [ $? -gt 128 ]; then
+  if [ -n "$(find "$DEFCONFIG_DIR" -type f -name "$DEFCONFIG" -print -quit)" ]; then
    echo "Use '$DEFCONFIG' as defconfig"
    break
   else
@@ -80,59 +124,43 @@ if [ -z $DEFCONFIG ]; then
   fi
  fi
  done
+elif [ ! -n "$(find "$DEFCONFIG_DIR" -type f -name "$DEFCONFIG" -print -quit)" ]; then
+ echo "No such defconfig name '$DEFCONFIG'"
+ exit 1
 else
- if [ ! -n $(find "$KERNEL_DIR/arch/arm64/configs" -type f -name "$DEFCONFIG") ]; then
-  echo "No such defconfig name '$DEFCONFIG'"
-  exit 1
- fi
+ echo "Use '$DEFCONFIG' as defconfig"
 fi
 
-if [ $VERSION = "4" ]; then
- export CROSS_COMPILE="${GCC_DIR}/aarch64/bin/aarch64-linux-android-"
- export CROSS_COMPILE_ARM32="${GCC_DIR}/arm32/bin/arm-linux-androideabi-"
- export BUILD_OPTIONS=(
-     -C "${KERNEL_DIR}"
-     O="${KERNEL_DIR}/out"
-     -j"$(nproc)"
-     ARCH=arm64
-     CROSS_COMPILE="${CROSS_COMPILE}"
-     CROSS_COMPILE_ARM32="${CROSS_COMPILE_ARM32}"
-     CC="ccache ${CLANG_DIR}"
-     CLANG_TRIPLE=aarch64-linux-gnu-
- )
- if [ ! -d "$GCC_DIR" ]; then
-  get_gcc
+if [ -z $CUSTOM_DEFCONFIG ]; then
+ while true; do
+ if read -t 10 -p "Enter custom defconfig: " CUSTOM_DEFCONFIG || [ $? -gt 128 ]; then
+  if [ -n "$(find "$DEFCONFIG_DIR" -type f -name "$CUSTOM_DEFCONFIG" -print -quit)" ]; then
+   echo "Use '$CUSTOM_DEFCONFIG' as custom defconfig"
+   break
+  else
+   echo "No such defconfig name '$CUSTOM_DEFCONFIG'"
+  fi
  fi
-elif [[ $VERSION = "5" && $PATCH_LEVEL = "4" ]]; then
- export CROSS_COMPILE="${GCC_DIR}/aarch64/bin/aarch64-linux-android-"
- export CROSS_COMPILE_ARM32="${GCC_DIR}/arm32/bin/arm-linux-androideabi-"
- export BUILD_OPTIONS=(
-     -C "${KERNEL_DIR}"
-     O="${KERNEL_DIR}/out"
-     -j"$(nproc)"
-     ARCH=arm64
-     CROSS_COMPILE="${CROSS_COMPILE}"
-     CROSS_COMPILE_ARM32="${CROSS_COMPILE_ARM32}"
-     CC="ccache ${CLANG_DIR}"
-     CLANG_TRIPLE=aarch64-linux-gnu-
- )
- if [ ! -d "$GCC_DIR" ]; then
-  get_gcc
- fi
+ done
+elif [ ! -n "$(find "$DEFCONFIG_DIR" -type f -name "$CUSTOM_DEFCONFIG")" ]; then
+ echo "No such defconfig name '$CUSTOM_DEFCONFIG'"
+ exit 1
+else
+ echo "Use '$CUSTOM_DEFCONFIG' as custom defconfig"
 fi
 
-if [ ! -d "$CLANG_DIR"]; then
+if [ ! -d "$CLANG_DIR" ]; then
  get_clang
 fi
 
 export ARCH=arm64
 export KBUILD_BUILD_USER="@Tam97123"
-export PATH="${CLANG_DIR}/bin/clang:${PATH}"
+export PATH="${CLANG_DIR}/bin:${PATH}"
 export LD_LIBRARY_PATH="${CLANG_DIR}/lib:${CLANG_DIR}/lib64:${LD_LIBRARY_PATH}"
 
 build_kernel () {
-    # Make default configuration.
-    make "${BUILD_OPTIONS[@]}" "$DEFCONFIG" custom.config
+    # Make with configuration.
+    make "${BUILD_OPTIONS[@]}" "$DEFCONFIG" "$CUSTOM_DEFCONFIG"
 
     # Build the kernel
     make "${BUILD_OPTIONS[@]}" || exit 1
