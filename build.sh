@@ -39,18 +39,22 @@ fi
 
 get_gcc() {
     echo "Downloading scripts..."
-    if ! curl -L https://raw.githubusercontent.com/Tam97123/NON_GKI_scripts/refs/heads/main/get_gcc.sh; then
-     echo "Error: Can not download the file! Exiting..."
-     exit 1
+    if [ ! -f "get_gcc.sh" ]; then 
+     if ! curl -L https://raw.githubusercontent.com/Tam97123/NON_GKI_scripts/refs/heads/main/get_gcc.sh; then
+      echo "Error: Can not download the file! Exiting..."
+      exit 1
+     fi
     fi
     chmod +x get_gcc.sh && source ./get_gcc.sh
 }
 
 get_clang () {
     echo "Downloading scripts..."
-    if ! curl -L https://raw.githubusercontent.com/Tam97123/NON_GKI_scripts/refs/heads/main/get_clang.sh; then
-     echo "Error: Can not download the file! Exiting..."
-     exit 1
+    if [ ! -f "get_clang.sh" ]; then 
+     if ! curl -L https://raw.githubusercontent.com/Tam97123/NON_GKI_scripts/refs/heads/main/get_clang.sh; then
+      echo "Error: Can not download the file! Exiting..."
+      exit 1
+     fi
     fi
     chmod +x get_clang.sh && source ./get_clang.sh
 }
