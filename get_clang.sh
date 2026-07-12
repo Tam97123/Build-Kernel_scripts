@@ -1,6 +1,4 @@
 #!/bin/bash
-PATH="${CLANG_DIR}:${PATH}"
-LD_LIBRARY_PATH="${CLANG_DIR}/lib:${CLANG_DIR}/lib64:${LD_LIBRARY_PATH}"
 
 CLANG_NAME=$(grep -oE 'clang-r[0-9]+[a-z]*' "$KERNEL_DIR/build.config.common" | head -n 1)
 
