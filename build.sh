@@ -115,7 +115,7 @@ fi
 
 if [ -z "$DEFCONFIG" ]; then
  while true; do
- if read -t 10 -p "Enter defconfig: " DEFCONFIG || [ $? -gt 128 ]; then
+ if read -p "Enter defconfig: " DEFCONFIG || [ $? -gt 128 ]; then
   if [ -n "$(find "$DEFCONFIG_DIR" -type f -name "$DEFCONFIG" -print -quit)" ]; then
    echo "Use '$DEFCONFIG' as defconfig"
    break
@@ -140,6 +140,9 @@ if [ -z $CUSTOM_DEFCONFIG ]; then
   else
    echo "No such defconfig name '$CUSTOM_DEFCONFIG'"
   fi
+ else
+  echo "User do not use custom defconfig"
+  break
  fi
  done
 elif [ ! -n "$(find "$DEFCONFIG_DIR" -type f -name "$CUSTOM_DEFCONFIG")" ]; then
