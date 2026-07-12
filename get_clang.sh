@@ -3,7 +3,7 @@
 CLANG_NAME=$(grep -oE 'clang-r[0-9]+[a-z]*' "$KERNEL_DIR/build.config.common" | head -n 1)
 
 if [ -z "$CLANG_NAME" ]; then
- echo "Error: Invaid Clang "$CLANG_NAME"."
+ echo "Error: Invaid Clang '$CLANG_NAME'."
  exit 1
 elif ! git clone --filter=blob:none --no-checkout https://android.googlesource.com/platform/prebuilts/clang/host/linux-x86 aosp_clang_meta; then
  echo "Error: Can not fetch AOSP history from Google."
