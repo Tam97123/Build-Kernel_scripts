@@ -41,17 +41,6 @@ if [ ! -f ".requirements" ]; then
  install_dependencies
 fi
 
-get_gcc() {
-    echo "Downloading scripts..."
-    if [ ! -f "get_gcc.sh" ]; then 
-     if ! curl -Lo https://raw.githubusercontent.com/Tam97123/NON_GKI_scripts/refs/heads/main/get_gcc.sh; then
-      echo "Error: Can not download the file! Exiting..."
-      exit 1
-     fi
-    fi
-    chmod +x get_gcc.sh && source ./get_gcc.sh
-}
-
 build_gcc () {
     export CROSS_COMPILE="${GCC_DIR}/aarch64/bin/aarch64-linux-android-"
     export CROSS_COMPILE_ARM32="${GCC_DIR}/arm32/bin/arm-linux-androideabi-"
@@ -78,6 +67,17 @@ build_without_gcc () {
      CC="ccache ${CLANG_DIR}/bin/clang"
      CLANG_TRIPLE=aarch64-linux-gnu-
     )
+}
+
+get_gcc() {
+    echo "Downloading scripts..."
+    if [ ! -f "get_gcc.sh" ]; then 
+     if ! curl -Lo https://raw.githubusercontent.com/Tam97123/NON_GKI_scripts/refs/heads/main/get_gcc.sh; then
+      echo "Error: Can not download the file! Exiting..."
+      exit 1
+     fi
+    fi
+    chmod +x get_gcc.sh && source ./get_gcc.sh
 }
 
 get_clang () {
