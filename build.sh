@@ -29,7 +29,7 @@ install_dependencies () {
      echo "Ubuntu/Debian-based system detected, using apt..."
      sudo apt update && sudo apt install -y git device-tree-compiler lz4 xz-utils zlib1g-dev openjdk-17-jdk gcc g++ python3 python-is-python3 p7zip-full android-sdk-libsparse-utils erofs-utils \
       default-jdk git gnupg flex bison gperf build-essential zip curl ccache libc6-dev libncurses-dev libx11-dev libreadline-dev libgl1 libgl1-mesa-dev \
-      python3 make sudo gcc g++ bc grep tofrodos python3-markdown libxml2-utils xsltproc zlib1g-dev python-is-python3 libc6-dev libtinfo6 \
+      python3 make sudo bc grep tofrodos python3-markdown libxml2-utils xsltproc zlib1g-dev python-is-python3 libc6-dev libtinfo6 \
       make repo cpio kmod openssl libelf-dev pahole libssl-dev libarchive-tools zstd libyaml-dev --fix-missing && wget http://security.ubuntu.com/ubuntu/pool/universe/n/ncurses/libtinfo5_6.3-2ubuntu0.1_amd64.deb && sudo dpkg -i libtinfo5_6.3-2ubuntu0.1_amd64.deb
     else
      echo "Error: Can not determine package manager, please install dependencies manually. Exiting..."
@@ -75,7 +75,7 @@ build_without_gcc () {
 get_gcc() {
     echo "Downloading scripts..."
     if [ ! -f "get_gcc.sh" ]; then 
-     if ! curl -LO https://raw.githubusercontent.com/Tam97123/NON_GKI_scripts/refs/heads/main/get_gcc.sh; then
+     if ! curl -LO https://raw.githubusercontent.com/Tam97123/NON_GKI_scripts/refs/scripts/main/get_gcc.sh; then
       echo "Error: Can not download the file! Exiting..."
       exit 1
      fi
@@ -87,7 +87,7 @@ get_gcc() {
 get_clang () {
     echo "Downloading scripts..."
     if [ ! -f "get_clang.sh" ]; then 
-     if ! curl -LO https://raw.githubusercontent.com/Tam97123/NON_GKI_scripts/refs/heads/main/get_clang.sh; then
+     if ! curl -LO https://raw.githubusercontent.com/Tam97123/NON_GKI_scripts/refs/scripts/main/get_clang.sh; then
       echo "Error: Can not download the file! Exiting..."
       exit 1
      fi
