@@ -81,6 +81,7 @@ get_gcc() {
      fi
     fi
     chmod +x get_gcc.sh && source ./get_gcc.sh
+    rm -f get_gcc.sh
 }
 
 get_clang () {
@@ -92,6 +93,7 @@ get_clang () {
      fi
     fi
     chmod +x get_clang.sh && source ./get_clang.sh
+    rm -f get_clang.sh
 }
 
 if [ -z "$KERNEL_VERSION" ]; then
@@ -103,12 +105,7 @@ else
  echo "Kernel ${VERSION}.${PATCH_LEVEL}"
 fi
 
-if [ $VERSION = "4" ]; then
- build_gcc
- if [ ! -d "$GCC_DIR" ]; then
-  get_gcc
- fi
-elif [[ $VERSION = "5" && $PATCH_LEVEL = "4" ]]; then
+if [[ "$VERSION" -eq "4" || ( "$VERSION" -eq "5" && "$PATCH_LEVEL" -eq "4" ) ]]; then
  build_gcc
  if [ ! -d "$GCC_DIR" ]; then
   get_gcc
@@ -133,7 +130,7 @@ if [ -z "$DEFCONFIG" ]; then
      echo "Use '$DEFCONFIG' as defconfig"
      break
     else
-     echo "No such defconfig name '$DEFCONFIG'"
+     echo "Error: No such defconfig name '$DEFCONFIG'"
     fi
    fi
   fi
@@ -144,7 +141,7 @@ else
   DEFCONFIG="${DEFCONFIG_PATH#$DEFCONFIG_DIR/}"
   echo "Use '$DEFCONFIG' as defconfig"
  else
-  echo "No such defconfig name '$DEFCONFIG'"
+  echo "Error: No such defconfig name '$DEFCONFIG'"
   exit 1
  fi
 fi
@@ -163,18 +160,18 @@ if [ -z "$CUSTOM_DEFCONFIG" ]; then
      echo "Use '$CUSTOM_DEFCONFIG' as custom defconfig"
      break
     else
-     echo "No such defconfig name '$CUSTOM_DEFCONFIG'. Please try again."
+     echo "Error: No such defconfig name '$CUSTOM_DEFCONFIG'"
     fi
    fi
   fi
-  done
+ done
 else
  DEFCONFIG_PATH=$(find "$DEFCONFIG_DIR" -type f -name "$CUSTOM_DEFCONFIG" -print -quit)
  if [ -n "$DEFCONFIG_PATH" ]; then
   CUSTOM_DEFCONFIG="${DEFCONFIG_PATH#$DEFCONFIG_DIR/}"
   echo "Use '$CUSTOM_DEFCONFIG' as custom defconfig"
  else
-  echo "No such defconfig name '$CUSTOM_DEFCONFIG'"
+  echo "Error: No such defconfig name '$CUSTOM_DEFCONFIG'"
   exit 1
  fi
 fi
