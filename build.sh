@@ -11,6 +11,9 @@ DEFCONFIG_DIR=$KERNEL_DIR/arch/arm64/configs
 DEFCONFIG=
 CUSTOM_DEFCONFIG=
 
+# Init submodules
+git submodule init && git submodule update
+
 # Function to detect OS and install dependencies
 install_dependencies () {
     echo "Detecting OS and installing dependencies..."
@@ -97,7 +100,7 @@ if [ -z "$KERNEL_VERSION" ]; then
 else
  VERSION=$(echo "$KERNEL_VERSION" | cut -d. -f1)
  PATCH_LEVEL=$(echo "$KERNEL_VERSION" | cut -d. -f2)
- echo "Kernel ${VERSION}.{$PATCH_LEVEL}"
+ echo "Kernel ${VERSION}.${PATCH_LEVEL}"
 fi
 
 if [ $VERSION = "4" ]; then
@@ -180,6 +183,11 @@ export ARCH=arm64
 export KBUILD_BUILD_USER="@Tam97123"
 export PATH="${CLANG_DIR}/bin:${PATH}"
 export LD_LIBRARY_PATH="${CLANG_DIR}/lib:${CLANG_DIR}/lib64:${LD_LIBRARY_PATH}"
+
+# Use ccache to speed up build
+export USE_CCACHE=1
+export CCACHE_EXEC=/usr/bin/ccache
+ccache -M 30G
 
 build_kernel () {
     # Make with configuration.
