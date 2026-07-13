@@ -191,8 +191,11 @@ ccache -M 30G
 
 build_kernel () {
     # Make with configuration.
-    make "${BUILD_OPTIONS[@]}" "$DEFCONFIG" "$CUSTOM_DEFCONFIG"
-
+    if [ -z "$CUSTOM_DEFCONFIG ]; then
+     make "${BUILD_OPTIONS[@]}" "$DEFCONFIG"
+    else
+     make "${BUILD_OPTIONS[@]}" "$DEFCONFIG" "$CUSTOM_DEFCONFIG"
+    fi
     # Build the kernel
     make "${BUILD_OPTIONS[@]}" || exit 1
 }
