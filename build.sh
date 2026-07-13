@@ -94,10 +94,11 @@ get_clang () {
 if [ -z "$KERNEL_VERSION" ]; then
  echo "Error: Can not find the kernel version! Exiting..."
  exit 1
+else
+ VERSION=$(echo "$KERNEL_VERSION" | cut -d. -f1)
+ PATCH_LEVEL=$(echo "$KERNEL_VERSION" | cut -d. -f2)
+ echo "Kernel ${VERSION}.{$PATCH_LEVEL}"
 fi
-
-VERSION=$(echo "$KERNEL_VERSION" | cut -d. -f1)
-PATCH_LEVEL=$(echo "$KERNEL_VERSION" | cut -d. -f2)
 
 if [ $VERSION = "4" ]; then
  build_gcc
