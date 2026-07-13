@@ -17,10 +17,12 @@ if [ ! -d "$KERNEL_DIR/KernelSU" ]; then
  fi
 fi
 
+# UI only, you can remove these or comment out
 sed -i 's|$(subst ",,$(CONFIG_KSU_FULL_NAME_FORMAT))|%TAG_NAME%-%COMMIT_SHA%-t.me/noforce2pay/|' "$KERNEL_DIR/KernelSU/kernel/KBuild"
 sed -i '/-dirty/d' "$KERNEL_DIR/KernelSU/kernel/KBuild"
 
-if [[ "$VERSION" -lt "5" || ( "$VERSION" -eq "5" && "$PATCH_LEVEL" -eq "4" ]]; then
+# Patch SUSFS (temporary for non gki)
+if [[ "$VERSION" -lt "5" || ( "$VERSION" -eq "5" && "$PATCH_LEVEL" -eq "4" ) ]]; then
  if [ ! -f "$KERNEL_DIR/susfs_inline_hook_patches.sh" ]; then
   echo "Downloading script..."
   if ! curl -LO https://raw.githubusercontent.com/JackA1ltman/NonGKI_Kernel_Build_2nd/refs/heads/mainline/Patches/susfs_inline_hook_patches.sh; then
