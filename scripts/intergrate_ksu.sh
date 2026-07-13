@@ -4,7 +4,7 @@ cd $KERNEL_DIR
 
 # Abort scripts for kernel 4.4
 if [[ "$VERSION" -eq "4" && "$PATCH_LEVEL" -eq "4" ]]; then
- echo "SUSFS do not support kernel 4.4! Use manual hook instead."
+ echo "SUSFS does not support kernel 4.4! Use manual hook or backport manually instead."
  exit 1
 fi
 
@@ -17,4 +17,5 @@ if [ ! -d "$KERNEL_DIR/KernelSU" ]; then
  fi
 fi
 
-sed 's/KSU_VERSION_FULL := $(subst ",,$(CONFIG_KSU_FULL_NAME_FORMAT))/KSU_VERSION_FULL := %TAG_NAME%-%COMMIT_SHA%-t.me/noforce2pay
+sed -i 's|$(subst ",,$(CONFIG_KSU_FULL_NAME_FORMAT))|%TAG_NAME%-%COMMIT_SHA%-t.me/noforce2pay/|' "$KERNEL_DIR/KernelSU/kernel/KBuild"
+sed -i '/-dirty/d' "$KERNEL_DIR/KernelSU/kernel/KBuild"
