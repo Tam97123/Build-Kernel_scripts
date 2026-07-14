@@ -120,7 +120,7 @@ fi
 
 if [ -z "$DEFCONFIG" ]; then
  while true; do
-  if read -p "Enter defconfig: " DEFCONFIG || [ $? -gt 128 ]; then
+  if read -p "Enter defconfig: " DEFCONFIG; then
    if [ -z "$DEFCONFIG" ]; then
     echo "Defconfig is necessary when building the kernel"
    else
@@ -148,7 +148,7 @@ fi
 
 if [ -z "$CUSTOM_DEFCONFIG" ]; then
  while true; do
-  if read -t 10 -p "Enter custom defconfig: " CUSTOM_DEFCONFIG || [ $? -gt 128 ]; then
+  if read -t 10 -p "Enter custom defconfig: " CUSTOM_DEFCONFIG; then
    if [ -z "$CUSTOM_DEFCONFIG" ]; then
     echo ""
     echo "You do not use custom defconfig"
