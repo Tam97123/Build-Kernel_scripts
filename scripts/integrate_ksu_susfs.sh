@@ -1,14 +1,6 @@
 #!/bin/bash
 REJECT_DIR=$KERNEL_DIR/patch_rejects
 
-# Abort scripts for kernel 4.4 and older
-if [[ "$VERSION" -eq "4" && "$PATCH_LEVEL" -eq "4" ]]; then
- echo "SUSFS does not support kernel 4.4! Use manual hook or backport manually instead."
- exit 1
-elif [ "$VERSION" -lt "4" ]; then
- echo "SUSFS does not support kernel older than version 4.x ! Please backport manually."
-fi
-
 # Integrate KernelSU (ReSukiSU)
 if [ ! -d "$KERNEL_DIR/KernelSU" ]; then
  echo "Downloading KernelSU..."
@@ -18,7 +10,7 @@ if [ ! -d "$KERNEL_DIR/KernelSU" ]; then
  fi
 fi
 
-# UI only, you can remove these or comment out
+# For UI, you can remove these or comment out
 sed -i 's|$(subst ",,$(CONFIG_KSU_FULL_NAME_FORMAT))|%TAG_NAME%-%COMMIT_SHA%-t.me/noforce2pay/|' "$KERNEL_DIR/KernelSU/kernel/KBuild"
 sed -i '/-dirty/d' "$KERNEL_DIR/KernelSU/kernel/KBuild"
 
