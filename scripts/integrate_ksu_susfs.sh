@@ -43,24 +43,29 @@ mapfile -t REJ_FILES < <(find . -name "*.rej")
 # Check if the array has any items
 if [ ${#REJ_FILES[@]} -gt 0 ]; then
  echo "Found fail patches!."
- read -t 10 -p "Continue build kernel? (y/N): " COLLECT_REJECTS
  while true; do
-  if [ -z "$COLLECT_REJECTS" ]; then
+  if read -t 10 -p "Continue build kernel? (y/N): " COLLECT_REJECTS
+   if [ -z "$COLLECT_REJECTS" ]; then
+    echo -e "\n[+] Collecting .rej and .orig files into $REJECT_DIR and continue"
+    mkdir -p "$REJECT_DIR"
+    find . -type f \( -name "*.rej" -o -name "*.orig" \) -exec mv {} "$REJECT_DIR/" \;
+    break
+   elif [[ "$COLLECT_REJECTS" =~ ^[Yy]$ ]]; then
+    echo "[+] Deleting .rej and .orig files and CONTINUING..."
+    find . -type f \( -name "*.rej" -o -name "*.orig" \) -delete
+    break
+   elif [[ "$COLLECT_REJECTS" =~ ^[Nn]$ ]]; then
+    echo "[-] Collecting .rej and .orig files into $REJECT_DIR. Aborting..."
+    mkdir -p "$REJECT_DIR"
+    find . -type f \( -name "*.rej" -o -name "*.orig" \) -exec mv {} "$REJECT_DIR/" \;
+    exit 1
+   else
+    echo "Unknown answer: $COLLECT_REJECTS"
+  else
    echo -e "\n[+] Collecting .rej and .orig files into $REJECT_DIR and continue"
    mkdir -p "$REJECT_DIR"
    find . -type f \( -name "*.rej" -o -name "*.orig" \) -exec mv {} "$REJECT_DIR/" \;
    break
-  elif [[ "$COLLECT_REJECTS" =~ ^[Yy]$ ]]; then
-   echo "[+] Deleting .rej and .orig files and CONTINUING..."
-   find . -type f \( -name "*.rej" -o -name "*.orig" \) -delete
-   break
-  elif [[ "$COLLECT_REJECTS" =~ ^[Nn]$ ]]; then
-   echo "[-] Collecting .rej and .orig files into $REJECT_DIR. Aborting..."
-   mkdir -p "$REJECT_DIR"
-   find . -type f \( -name "*.rej" -o -name "*.orig" \) -exec mv {} "$REJECT_DIR/" \;
-   exit 1
-  else
-   echo "Unknown answer: $COLLECT_REJECTS"
   fi
  done
 fi
