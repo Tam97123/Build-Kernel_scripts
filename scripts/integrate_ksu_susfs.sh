@@ -38,34 +38,46 @@ else
  exit 1
 fi
 
+move_rejects() {
+ find . -type f -name "*.rej" -print0 | while IFS= read -r -d $'\0' rej_file; do
+  mkdir -p "$REJECT_DIR"
+  local rej_dir=$(dirname "$rej_file")
+  mkdir -p "$REJECT_DIR/$rej_dir" 
+  mv "$rej_file" "$REJECT_DIR/$rej_dir/"
+ 
+  local orig_file="${rej_file%.rej}.orig"
+  if [ -f "$orig_file" ]; then
+    mv "$orig_file" "$REJECT_DIR/$rel_dir/"
+  fi
+ done
+}
+
+delete_rejects() { find . -type f -name "*.rej" -print0 | while IFS= read -r -d $'\0' rej_file; do rm -f "$rej_file"; done }
+
 mapfile -t REJ_FILES < <(find . -name "*.rej")
 
-# Check if the array has any items
 if [ ${#REJ_FILES[@]} -gt 0 ]; then
- echo "Found fail patches!."
+ echo "Found fail patches!"
  while true; do
   if read -t 10 -p "Continue build kernel? (y/N): " COLLECT_REJECTS; then
    if [ -z "$COLLECT_REJECTS" ]; then
-    echo -e "\n[+] Collecting .rej and .orig files into $REJECT_DIR and continue"
-    mkdir -p "$REJECT_DIR"
-    find . -type f \( -name "*.rej" -o -name "*.orig" \) -exec mv {} "$REJECT_DIR/" \;
+    echo -e "\n[+] Collecting rejects and it's original files into $REJECT_DIR and continue."
+    move_rejects
     break
    elif [[ "$COLLECT_REJECTS" =~ ^[Yy]$ ]]; then
-    echo "[+] Deleting .rej and .orig files and CONTINUING..."
-    find . -type f \( -name "*.rej" -o -name "*.orig" \) -delete
+    echo "[+] Deleting rejects files and continue."
+    delete_rejects
     break
    elif [[ "$COLLECT_REJECTS" =~ ^[Nn]$ ]]; then
-    echo "[-] Collecting .rej and .orig files into $REJECT_DIR. Aborting..."
-    mkdir -p "$REJECT_DIR"
-    find . -type f \( -name "*.rej" -o -name "*.orig" \) -exec mv {} "$REJECT_DIR/" \;
+    echo "[-] Collecting rejects and it's original files into $REJECT_DIR. Aborting..."
+    move_rejects
     exit 1
    else
     echo "Unknown answer: $COLLECT_REJECTS"
    fi
   else
-   echo -e "\n[+] Collecting .rej and .orig files into $REJECT_DIR and continue"
-   mkdir -p "$REJECT_DIR"
-   find . -type f \( -name "*.rej" -o -name "*.orig" \) -exec mv {} "$REJECT_DIR/" \;
+   echo -e "\n[+] Collecting rejects and it's original files into $REJECT_DIR and continue."
+   move_rejects
    break
   fi
  done
