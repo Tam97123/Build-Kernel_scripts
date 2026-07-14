@@ -210,9 +210,8 @@ integrate_ksu_susfs () {
       echo "Error: Can not download script."
       exit 1
      fi
-    else
-     source ./integrate_ksu_susfs.sh
     fi
+    source ./integrate_ksu_susfs.sh
     echo "Downloading defconfig to enable KSU..."
     if ! curl -L "$REPO_URL/defconfig/ksu-susfs_defconfig" -o "$DEFCONFIG_DIR/ksu-susfs_defconfig"; then
      echo "Error: Can not download file."
