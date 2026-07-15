@@ -105,15 +105,14 @@ else
  clear && echo "Kernel ${VERSION}.${PATCH_LEVEL}"
 fi
 
+mkdir $TOOLCHAIN_DIR
+if [ ! -d "$CLANG_DIR" ]; then get_clang; fi
+
 if [[ "$VERSION" -eq "4" && "$PATCH_LEVEL" -le "14" ]]; then
  build_gcc
  if [ ! -d "$GCC_DIR" ]; then get_gcc; fi
 else
  build_without_gcc
-fi
-
-if [ ! -d "$CLANG_DIR" ]; then
- get_clang
 fi
 
 if [ -z "$DEFCONFIG" ]; then
