@@ -103,7 +103,7 @@ else
  VERSION=$(echo "$KERNEL_VERSION" | cut -d. -f1)
  PATCH_LEVEL=$(echo "$KERNEL_VERSION" | cut -d. -f2)
  clear && echo "Kernel ${VERSION}.${PATCH_LEVEL}"
-fi]
+fi
 
 if [ ! -d "$CLANG_DIR" ]; then get_clang; fi
 
