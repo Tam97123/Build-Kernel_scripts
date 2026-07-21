@@ -58,8 +58,6 @@ build_gcc () {
 }
 
 build_without_gcc () {
-    export CROSS_COMPILE="${GCC_DIR}/aarch64/bin/aarch64-linux-android-"
-    export CROSS_COMPILE_ARM32="${GCC_DIR}/arm32/bin/arm-linux-androideabi-"
     BUILD_OPTIONS=(
      -C "${KERNEL_DIR}"
      O="${KERNEL_DIR}/out"
