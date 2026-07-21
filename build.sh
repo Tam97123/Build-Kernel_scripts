@@ -2,7 +2,7 @@
 set -euo pipefail
 
 KERNEL_DIR=$(pwd)
-KERNEL_VERSION=$( (make kernelversion | grep -Eo '[0-9]+\.[0-9]+\.[0-9]+' | tail -n 1) || true )
+KERNEL_VERSION=$( (head -n 3 Makefile | grep -E 'VERSION|PATCHLEVEL' | awk '{print $3}' | paste -sd '.') || true )
 TOOLCHAIN_DIR="$KERNEL_DIR/toolchain"
 CLANG_DIR="$TOOLCHAIN_DIR/clang"
 GCC_DIR="$TOOLCHAIN_DIR/gcc"
@@ -74,11 +74,9 @@ build_without_gcc () {
 
 get_gcc() {
     echo "Downloading scripts..."
-    if [ ! -f "get_gcc.sh" ]; then 
-     if ! curl -LO "$REPO_URL/scripts/get_gcc.sh"; then
-      echo "Error: Can not download the file! Exiting..."
-      exit 1
-     fi
+    if ! curl -LO "$REPO_URL/scripts/get_gcc.sh"; then
+     echo "Error: Can not download the file! Exiting..."
+     exit 1
     fi
     source ./get_gcc.sh
     rm -f get_gcc.sh
@@ -86,11 +84,9 @@ get_gcc() {
 
 get_clang () {
     echo "Downloading scripts..."
-    if [ ! -f "get_clang.sh" ]; then 
-     if ! curl -LO "$REPO_URL/scripts/get_clang.sh"; then
-      echo "Error: Can not download the file! Exiting..."
-      exit 1
-     fi
+    if ! curl -LO "$REPO_URL/scripts/get_clang.sh"; then
+     echo "Error: Can not download the file! Exiting..."
+     exit 1
     fi
     source ./get_clang.sh
     rm -f get_clang.sh
@@ -100,8 +96,8 @@ if [ -z "$KERNEL_VERSION" ]; then
  echo "Error: Can not find the kernel version! Exiting..."
  exit 1
 else
- VERSION=$(echo "$KERNEL_VERSION" | cut -d. -f1)
- PATCH_LEVEL=$(echo "$KERNEL_VERSION" | cut -d. -f2)
+ VERSION=$(echo "$KERNEL_VERSION" | awk -F '.' '{print $1}')
+ PATCH_LEVEL=$(echo "$KERNEL_VERSION" | awk -F '.' '{print $2}')
  clear && echo "Kernel ${VERSION}.${PATCH_LEVEL}"
 fi
 
