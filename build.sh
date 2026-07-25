@@ -101,7 +101,7 @@ fi
 
 if [ ! -d "$CLANG_DIR" ]; then get_clang; fi
 
-if [[ "$VERSION" -eq "4" && "$PATCH_LEVEL" -le "14" ]]; then
+if [[ "$VERSION" -eq "4" && "$PATCH_LEVEL" -le "19" ]]; then
  build_gcc
  if [ ! -d "$GCC_DIR" ]; then get_gcc; fi
 else
