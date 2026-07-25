@@ -23,6 +23,6 @@ git sparse-checkout init --cone
 git sparse-checkout set "$CLANG_NAME"
 git checkout "$CLANG_TARGET"
 
-mkdir -p $CLANG_DIR
+mkdir -p $TOOLCHAIN_DIR
 mv "$CLANG_NAME" "$CLANG_DIR"
 cd .. && rm -rf aosp_clang
