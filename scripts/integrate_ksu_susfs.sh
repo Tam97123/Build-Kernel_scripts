@@ -11,7 +11,7 @@ if [ ! -d "$KERNEL_DIR/KernelSU" ]; then
 fi
 
 # For UI only
-sed -i 's|$(subst ",,$(CONFIG_KSU_FULL_NAME_FORMAT))|%TAG_NAME%-%COMMIT_SHA%-t.me/noforce2pay/|' "$KERNEL_DIR/KernelSU/kernel/Kbuild"
+sed -i 's|$(subst ",,$(CONFIG_KSU_FULL_NAME_FORMAT))|%TAG_NAME%-%COMMIT_SHA%-t.me/noforce2pay|' "$KERNEL_DIR/KernelSU/kernel/Kbuild"
 sed -i '/-dirty/d' "$KERNEL_DIR/KernelSU/kernel/Kbuild"
 
 # Patch SUSFS
