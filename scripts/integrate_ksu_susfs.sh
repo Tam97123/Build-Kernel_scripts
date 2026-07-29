@@ -20,7 +20,7 @@ if [ ! -f "$KERNEL_DIR/susfs_inline_hook_patches.sh" ]; then
   echo "Error: Can not download script."
   exit 1
  fi
- chmod +x susfs_inline_hook_patches.sh && ./susfs_inline_hook_patches.sh
+ chmod +x susfs_inline_hook_patches.sh && bash susfs_inline_hook_patches.sh
 fi
  if [ ! -f "$KERNEL_DIR/susfs_patch_to_$VERSION.$PATCH_LEVEL.patch" ]; then
  echo "Downloading patch..."
