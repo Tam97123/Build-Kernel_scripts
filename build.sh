@@ -178,7 +178,7 @@ export LD_LIBRARY_PATH="${CLANG_DIR}/lib:${CLANG_DIR}/lib64:${LD_LIBRARY_PATH:-}
 # Use ccache to speed up build
 export USE_CCACHE=1
 export CCACHE_EXEC=/usr/bin/ccache
-ccache -M 30G
+ccache -M 50G
 
 build_kernel () {
     # Make with configuration.
