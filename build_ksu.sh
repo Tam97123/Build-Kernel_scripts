@@ -178,23 +178,23 @@ export LD_LIBRARY_PATH="${CLANG_DIR}/lib:${CLANG_DIR}/lib64:${LD_LIBRARY_PATH:-}
 # Use ccache to speed up build
 export USE_CCACHE=1
 export CCACHE_EXEC=/usr/bin/ccache
-ccache -M 30G
+ccache -M 50G
 
-#intergrate_ksu () {
-#    echo "Downloading script..."
-#    if ! curl -LO "$REPO_URL/scripts/integrate_ksu.sh"; then
-#     echo "Error: Can not download script."
-#     exit 1
-#    fi
-#    source ./integrate_ksu.sh
-#    rm -f integrate_ksu.sh
-#    echo "Downloading defconfig to enable KSU..."
-#    if ! curl -L "$REPO_URL/defconfig/ksu_defconfig" -o "$DEFCONFIG_DIR/ksu_defconfig"; then
-#     echo "Error: Can not download DEFCONFIG."
-#     exit 1
-#    fi
-#    CUSTOM_DEFCONFIG="${CUSTOM_DEFCONFIG:+$CUSTOM_DEFCONFIG }ksu_defconfig"
-#}
+intergrate_ksu () {
+    echo "Downloading script..."
+    if ! curl -LO "$REPO_URL/scripts/integrate_ksu.sh"; then
+     echo "Error: Can not download script."
+     exit 1
+    fi
+    source integrate_ksu.sh
+    rm -f integrate_ksu.sh
+    echo "Downloading defconfig to enable KSU..."
+    if ! curl -L "$REPO_URL/defconfig/ksu_defconfig" -o "$DEFCONFIG_DIR/ksu_defconfig"; then
+     echo "Error: Can not download DEFCONFIG."
+     exit 1
+    fi
+    CUSTOM_DEFCONFIG="${CUSTOM_DEFCONFIG:+$CUSTOM_DEFCONFIG }ksu_defconfig"
+}
 
 integrate_ksu_susfs () {
     echo "Downloading script..."
@@ -202,7 +202,7 @@ integrate_ksu_susfs () {
      echo "Error: Can not download script."
      exit 1
     fi
-    source ./integrate_ksu_susfs.sh
+    source integrate_ksu_susfs.sh
     rm -f integrate_ksu_susfs.sh
     echo "Downloading defconfig to enable KernelSU..."
     if ! curl -L "$REPO_URL/defconfig/ksu-susfs_defconfig" -o "$DEFCONFIG_DIR/ksu-susfs_defconfig"; then
@@ -224,16 +224,18 @@ build_kernel () {
 }
 
 # Abort scripts for some kernels
-if [[ "$VERSION" -lt "4" || ( "$VERSION" -eq "4" && "$PATCH_LEVEL" -eq "4" ) ]]; then
+if [[ ( "$VERSION" -le "3" && "$PATCH_LEVEL" -lt "18" ) || ( "$VERSION" -eq "4" && "$PATCH_LEVEL" -eq "4" ) ]]; then
  echo "Not support kernel $VERSION.$PATCH_LEVEL! Please backport manually."
  exit 1
-elif [[ "$VERSION" -ge "5" && "$PATCH_LEVEL" -gt "4" ]]; then
+elif [[ "$VERSION" -gt "5" || ( "$VERSION" -eq "5" && "$PATCH_LEVEL" -gt "4" ) ]]; then
 # integrate_ksu
  echo "Not support GKI kernel! Please backport manually."
  exit 1
 else
  echo "Integrate KernelSU with SUSFS..."
  integrate_ksu_susfs
+ # echo "Integrate KernelSU..."
+ # integrate_ksu
 fi
 
 build_kernel
