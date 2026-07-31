@@ -73,7 +73,7 @@ build_without_gcc () {
 get_gcc() {
     echo "Downloading scripts..."
     if ! curl -LO "$REPO_URL/scripts/get_gcc.sh"; then
-     echo "Error: Can not download the file!"
+     echo "Error: Can not download the file! Exiting..."
      exit 1
     fi
     source ./get_gcc.sh
@@ -83,7 +83,7 @@ get_gcc() {
 get_clang () {
     echo "Downloading scripts..."
     if ! curl -LO "$REPO_URL/scripts/get_clang.sh"; then
-     echo "Error: Can not download the file!"
+     echo "Error: Can not download the file! Exiting..."
      exit 1
     fi
     source ./get_clang.sh
@@ -91,17 +91,12 @@ get_clang () {
 }
 
 if [ -z "$KERNEL_VERSION" ]; then
- echo "Error: Can not detect kernel version!"
+ echo "Error: Can not find the kernel version! Exiting..."
  exit 1
 else
  VERSION=$(echo "$KERNEL_VERSION" | awk -F '.' '{print $1}')
  PATCH_LEVEL=$(echo "$KERNEL_VERSION" | awk -F '.' '{print $2}')
- if [[ ( "$VERSION" -eq "5" && "$PATCH_LEVEL" -gt "4" ) || "$VERSION" -gt "5" ]]; then
-  echo "Not support GKI kernel (${VERSION}.${PATCH_LEVEL})!"
-  exit 1
- else
-  echo "Detected kernel (${VERSION}.${PATCH_LEVEL})!"
- fi
+ clear && echo "Kernel ${VERSION}.${PATCH_LEVEL}"
 fi
 
 if [ ! -d "$CLANG_DIR" ]; then get_clang; fi
@@ -115,41 +110,32 @@ fi
 
 if [ -z "$DEFCONFIG" ]; then
  while true; do
-  if read -p "Enter defconfig (support multiple): " DEFCONFIG; then
+  if read -p "Enter defconfig: " DEFCONFIG; then
    if [ -z "$DEFCONFIG" ]; then
     echo -e "\nDefconfig is necessary when building the kernel"
    else
-    DEFCONFIGS=
-    for muti_defconfigs in $DEFCONFIG; do
-     DEFCONFIG_PATH=$(find "$DEFCONFIG_DIR" -type f -name "$muti_defconfigs" -print -quit)
-     if [ -z "$DEFCONFIG_PATH" ]; then
-      echo "Error: No such defconfig name '$muti_defconfigs'"
-      continue 2
-     else
-      DEFCONFIGS="$DEFCONFIGS ${DEFCONFIG_PATH#$DEFCONFIG_DIR/}"
-     fi
-    done
-    DEFCONFIG="${DEFCONFIGS# }"
-    echo "Use '$DEFCONFIG' as defconfig"
-    break
+    DEFCONFIG_PATH=$(find "$DEFCONFIG_DIR" -type f -name "$DEFCONFIG" -print -quit)
+    if [ -n "$DEFCONFIG_PATH" ]; then
+     DEFCONFIG="${DEFCONFIG_PATH#$DEFCONFIG_DIR/}"
+     echo "Use '$DEFCONFIG' as defconfig"
+     break
+    else
+     echo "Error: No such defconfig name '$DEFCONFIG'"
+    fi
    fi
   else
    echo -e "\nDefconfig is necessary when building the kernel"
   fi
  done
 else
- DEFCONFIGS=
- for muti_defconfigs in $DEFCONFIG; do
-  DEFCONFIG_PATH=$(find "$DEFCONFIG_DIR" -type f -name "$muti_defconfigs" -print -quit)
-  if [ -z "$DEFCONFIG_PATH" ]; then
-   echo "Error: No such defconfig name '$muti_defconfigs'"
-   exit 1
-  else
-   DEFCONFIGS="$DEFCONFIGS ${DEFCONFIG_PATH#$DEFCONFIG_DIR/}"
-  fi
- done
- DEFCONFIG="${DEFCONFIGS# }"
- echo "Use '$DEFCONFIG' as defconfig"
+ DEFCONFIG_PATH=$(find "$DEFCONFIG_DIR" -type f -name "$DEFCONFIG" -print -quit)
+ if [ -n "$DEFCONFIG_PATH" ]; then
+  DEFCONFIG="${DEFCONFIG_PATH#$DEFCONFIG_DIR/}"
+  echo "Use '$DEFCONFIG' as defconfig"
+ else
+  echo "Error: No such defconfig name '$DEFCONFIG'"
+  exit 1
+ fi
 fi
 
 if [ -z "$CUSTOM_DEFCONFIG" ]; then
@@ -226,17 +212,6 @@ integrate_ksu_susfs () {
     CUSTOM_DEFCONFIG="${CUSTOM_DEFCONFIG:+$CUSTOM_DEFCONFIG }ksu-susfs_defconfig"
 }
 
-build_kernel () {
-    # Make with configuration.
-    if [ -z "$CUSTOM_DEFCONFIG" ]; then
-     make "${BUILD_OPTIONS[@]}" "$DEFCONFIG" 2>&1 | tee build.log
-    else
-     make "${BUILD_OPTIONS[@]}" "$DEFCONFIG" $CUSTOM_DEFCONFIG 2>&1 | tee build.log
-    fi
-    # Build the kernel
-    make "${BUILD_OPTIONS[@]}"
-}
-
 if [[ ( "$VERSION" -eq "3" && "$PATCH_LEVEL" -eq "18" ) || ( "$VERSION" -eq "4" && "$PATCH_LEVEL" -eq "4" ) ]]; then
  echo "Integrate KernelSU..."
  integrate_ksu
@@ -247,5 +222,16 @@ else
  echo "Error: This kernel scripts do not support kernel ${VERSION}.${PATCH_LEVEL}"
  exit 1
 fi
+
+build_kernel () {
+    # Make with configuration.
+    if [ -z "$CUSTOM_DEFCONFIG" ]; then
+     make "${BUILD_OPTIONS[@]}" "$DEFCONFIG" 2>&1 | tee build.log
+    else
+     make "${BUILD_OPTIONS[@]}" "$DEFCONFIG" $CUSTOM_DEFCONFIG 2>&1 | tee build.log
+    fi
+    # Build the kernel
+    make "${BUILD_OPTIONS[@]}"
+}
 
 build_kernel
