@@ -97,10 +97,10 @@ else
  VERSION=$(echo "$KERNEL_VERSION" | awk -F '.' '{print $1}')
  PATCH_LEVEL=$(echo "$KERNEL_VERSION" | awk -F '.' '{print $2}')
  if [[ ( "$VERSION" -eq "5" && "$PATCH_LEVEL" -gt "4" ) || "$VERSION" -gt "5" ]]; then
-  echo "Not support GKI kernel (${VERSION}.${PATCH_LEVEL})!"
+  echo "Not support GKI kernel ${VERSION}.${PATCH_LEVEL}!"
   exit 1
  else
-  echo "Detected kernel (${VERSION}.${PATCH_LEVEL})!"
+  echo "Detected kernel ${VERSION}.${PATCH_LEVEL}!"
  fi
 fi
 
