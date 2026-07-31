@@ -229,7 +229,7 @@ integrate_ksu_susfs () {
 if [[ ( "$VERSION" -eq "3" && "$PATCH_LEVEL" -eq "18" ) || ( "$VERSION" -eq "4" && "$PATCH_LEVEL" -eq "4" ) ]]; then
  echo "Integrate KernelSU..."
  integrate_ksu
-elif [[ "$VERSION" -eq "4" || ( "$VERSION" -eq "5" && "$PATCH_LEVEL" -eq "4" ) ]]
+elif [[ ( "$VERSION" -eq "4" && "$PATCH_LEVEL" -ne "4" ) || ( "$VERSION" -eq "5" && "$PATCH_LEVEL" -eq "4" ) ]]
  echo "Integrate KernelSU with SUSFS..."
  integrate_ksu_susfs
 else
