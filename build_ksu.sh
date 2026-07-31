@@ -215,9 +215,9 @@ integrate_ksu_susfs () {
 build_kernel () {
     # Make with configuration.
     if [ -z "$CUSTOM_DEFCONFIG" ]; then
-     make "${BUILD_OPTIONS[@]}" "$DEFCONFIG"
+     make "${BUILD_OPTIONS[@]}" "$DEFCONFIG" 2>&1 | tee error.log
     else
-     make "${BUILD_OPTIONS[@]}" "$DEFCONFIG" $CUSTOM_DEFCONFIG
+     make "${BUILD_OPTIONS[@]}" "$DEFCONFIG" $CUSTOM_DEFCONFIG 2>&1 | tee error.log
     fi
     # Build the kernel
     make "${BUILD_OPTIONS[@]}"
