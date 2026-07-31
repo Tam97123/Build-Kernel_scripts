@@ -73,7 +73,7 @@ build_without_gcc () {
 get_gcc() {
     echo "Downloading scripts..."
     if ! curl -LO "$REPO_URL/scripts/get_gcc.sh"; then
-     echo "Error: Can not download the file! Exiting..."
+     echo "Error: Can not download the file!"
      exit 1
     fi
     source ./get_gcc.sh
@@ -83,7 +83,7 @@ get_gcc() {
 get_clang () {
     echo "Downloading scripts..."
     if ! curl -LO "$REPO_URL/scripts/get_clang.sh"; then
-     echo "Error: Can not download the file! Exiting..."
+     echo "Error: Can not download the file!"
      exit 1
     fi
     source ./get_clang.sh
@@ -91,12 +91,17 @@ get_clang () {
 }
 
 if [ -z "$KERNEL_VERSION" ]; then
- echo "Error: Can not find the kernel version! Exiting..."
+ echo "Error: Can not detect kernel version!"
  exit 1
 else
  VERSION=$(echo "$KERNEL_VERSION" | awk -F '.' '{print $1}')
  PATCH_LEVEL=$(echo "$KERNEL_VERSION" | awk -F '.' '{print $2}')
- clear && echo "Kernel ${VERSION}.${PATCH_LEVEL}"
+ if [[ ( "$VERSION" -eq "5" && "$PATCH_LEVEL" -gt "4" ) || "$VERSION" -gt "5" ]]; then
+  echo "Not support GKI kernel (${VERSION}.${PATCH_LEVEL})!"
+  exit 1
+ else
+  echo "Detected kernel (${VERSION}.${PATCH_LEVEL})!"
+ fi
 fi
 
 if [ ! -d "$CLANG_DIR" ]; then get_clang; fi
@@ -110,32 +115,41 @@ fi
 
 if [ -z "$DEFCONFIG" ]; then
  while true; do
-  if read -p "Enter defconfig: " DEFCONFIG; then
+  if read -p "Enter defconfig (support multiple): " DEFCONFIG; then
    if [ -z "$DEFCONFIG" ]; then
     echo -e "\nDefconfig is necessary when building the kernel"
    else
-    DEFCONFIG_PATH=$(find "$DEFCONFIG_DIR" -type f -name "$DEFCONFIG" -print -quit)
-    if [ -n "$DEFCONFIG_PATH" ]; then
-     DEFCONFIG="${DEFCONFIG_PATH#$DEFCONFIG_DIR/}"
-     echo "Use '$DEFCONFIG' as defconfig"
-     break
-    else
-     echo "Error: No such defconfig name '$DEFCONFIG'"
-    fi
+    DEFCONFIGS=
+    for muti_defconfigs in $DEFCONFIG; do
+     DEFCONFIG_PATH=$(find "$DEFCONFIG_DIR" -type f -name "$muti_defconfigs" -print -quit)
+     if [ -z "$DEFCONFIG_PATH" ]; then
+      echo "Error: No such defconfig name '$muti_defconfigs'"
+      continue 2
+     else
+      DEFCONFIGS="$DEFCONFIGS ${DEFCONFIG_PATH#$DEFCONFIG_DIR/}"
+     fi
+    done
+    DEFCONFIG="${DEFCONFIGS# }"
+    echo "Use '$DEFCONFIG' as defconfig"
+    break
    fi
   else
    echo -e "\nDefconfig is necessary when building the kernel"
   fi
  done
 else
- DEFCONFIG_PATH=$(find "$DEFCONFIG_DIR" -type f -name "$DEFCONFIG" -print -quit)
- if [ -n "$DEFCONFIG_PATH" ]; then
-  DEFCONFIG="${DEFCONFIG_PATH#$DEFCONFIG_DIR/}"
-  echo "Use '$DEFCONFIG' as defconfig"
- else
-  echo "Error: No such defconfig name '$DEFCONFIG'"
-  exit 1
- fi
+ DEFCONFIGS=
+ for muti_defconfigs in $DEFCONFIG; do
+  DEFCONFIG_PATH=$(find "$DEFCONFIG_DIR" -type f -name "$muti_defconfigs" -print -quit)
+  if [ -z "$DEFCONFIG_PATH" ]; then
+   echo "Error: No such defconfig name '$muti_defconfigs'"
+   exit 1
+  else
+   DEFCONFIGS="$DEFCONFIGS ${DEFCONFIG_PATH#$DEFCONFIG_DIR/}"
+  fi
+ done
+ DEFCONFIG="${DEFCONFIGS# }"
+ echo "Use '$DEFCONFIG' as defconfig"
 fi
 
 if [ -z "$CUSTOM_DEFCONFIG" ]; then
@@ -223,19 +237,15 @@ build_kernel () {
     make "${BUILD_OPTIONS[@]}"
 }
 
-# Abort scripts for some kernels
-if [[ ( "$VERSION" -le "3" && "$PATCH_LEVEL" -lt "18" ) || ( "$VERSION" -eq "4" && "$PATCH_LEVEL" -eq "4" ) ]]; then
- echo "Not support kernel $VERSION.$PATCH_LEVEL! Please backport manually."
- exit 1
-elif [[ "$VERSION" -gt "5" || ( "$VERSION" -eq "5" && "$PATCH_LEVEL" -gt "4" ) ]]; then
-# integrate_ksu
- echo "Not support GKI kernel! Please backport manually."
- exit 1
-else
+if [[ ( "$VERSION" -eq "3" && "$PATCH_LEVEL" -eq "18" ) || ( "$VERSION" -eq "4" && "$PATCH_LEVEL" -eq "4" ) ]]; then
+ echo "Integrate KernelSU..."
+ integrate_ksu
+elif [[ "$VERSION" -eq "4" || ( "$VERSION" -eq "5" && "$PATCH_LEVEL" -eq "4" ) ]]
  echo "Integrate KernelSU with SUSFS..."
  integrate_ksu_susfs
- # echo "Integrate KernelSU..."
- # integrate_ksu
+else
+ echo "Error: This kernel scripts do not support kernel ${VERSION}.${PATCH_LEVEL}"
+ exit 1
 fi
 
 build_kernel
