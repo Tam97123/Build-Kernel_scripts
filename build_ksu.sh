@@ -240,9 +240,9 @@ fi
 build_kernel () {
     # Make with configuration.
     if [ -z "$CUSTOM_DEFCONFIG" ]; then
-     make "${BUILD_OPTIONS[@]}" "$DEFCONFIG" 2>&1 | tee build.log
+     make "${BUILD_OPTIONS[@]}" $DEFCONFIG 2>&1 | tee build.log
     else
-     make "${BUILD_OPTIONS[@]}" "$DEFCONFIG" $CUSTOM_DEFCONFIG 2>&1 | tee build.log
+     make "${BUILD_OPTIONS[@]}" $DEFCONFIG $CUSTOM_DEFCONFIG 2>&1 | tee build.log
     fi
     # Build the kernel
     make "${BUILD_OPTIONS[@]}"
