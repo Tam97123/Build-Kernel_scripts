@@ -31,7 +31,7 @@ install_dependencies () {
       libxml2 libxslt dos2unix kmod openssl elfutils-libelf-devel dwarves \
       openssl-devel libarchive zstd rsync libyaml-devel openssl-devel-engine --skip-unavailable
     else
-     echo "Error: Can not determine package manager, please install dependencies manually."
+     echo "Error: Can not determine package manager, please install dependencies manually." >&2
      exit 1
     fi
     touch .requirements
@@ -49,7 +49,6 @@ build_gcc () {
      -C "${KERNEL_DIR}"
      O="${KERNEL_DIR}/out"
      -j"$(nproc)"
-     ARCH=arm64
      CROSS_COMPILE="${CROSS_COMPILE}"
      CROSS_COMPILE_ARM32="${CROSS_COMPILE_ARM32}"
      CC="ccache ${CLANG_DIR}/bin/clang"
@@ -62,7 +61,6 @@ build_without_gcc () {
      -C "${KERNEL_DIR}"
      O="${KERNEL_DIR}/out"
      -j"$(nproc)"
-     ARCH=arm64
      LLVM=1
      LLVM_IAS=1
      CC="ccache ${CLANG_DIR}/bin/clang"
@@ -73,25 +71,48 @@ build_without_gcc () {
 get_gcc() {
     echo "Downloading scripts..."
     if ! curl -LO "$REPO_URL/scripts/get_gcc.sh"; then
-     echo "Error: Can not download the file!"
+     echo "Error: Can not download the file!" >&2
      exit 1
     fi
-    source ./get_gcc.sh
+    source get_gcc.sh
     rm -f get_gcc.sh
 }
 
 get_clang () {
     echo "Downloading scripts..."
     if ! curl -LO "$REPO_URL/scripts/get_clang.sh"; then
-     echo "Error: Can not download the file!"
+     echo "Error: Can not download the file!" >&2
      exit 1
     fi
-    source ./get_clang.sh
+    source get_clang.sh
     rm -f get_clang.sh
 }
 
+validate_defconfigs() {
+    local input_configs="$1"
+    local valid_names=""
+    local valid_paths=""
+
+    for config in $input_configs; do
+        local config_path=$(find "$DEFCONFIG_DIR" -type f -name "$config" -print -quit 2>/dev/null)
+        
+        if [ -n "$config_path" ]; then
+            valid_names="$valid_names ${config_path#$DEFCONFIG_DIR/}"
+            valid_paths="$valid_paths $config_path"
+        else
+            echo "Error: No such defconfig name '$config'" >&2
+            return 1
+        fi
+    done
+
+    # Export these variables globally for the rest of the script to use
+    VALID_DEFCONFIG_NAMES="${valid_names# }"
+    VALID_DEFCONFIG_PATHS="${valid_paths# }"
+    return 0 # Success
+}
+
 if [ -z "$KERNEL_VERSION" ]; then
- echo "Error: Can not detect kernel version!"
+ echo "Error: Can not detect kernel version!" >&2
  exit 1
 else
  VERSION=$(echo "$KERNEL_VERSION" | awk -F '.' '{print $1}')
@@ -115,82 +136,25 @@ fi
 
 if [ -z "$DEFCONFIG" ]; then
  while true; do
-  if read -p "Enter defconfig (support multiple): " DEFCONFIG; then
-   if [ -z "$DEFCONFIG" ]; then
-    echo -e "\nDefconfig is necessary when building the kernel"
-   else
-    DEFCONFIGS=
-    for muti_defconfigs in $DEFCONFIG; do
-     DEFCONFIG_PATH=$(find "$DEFCONFIG_DIR" -type f -name "$muti_defconfigs" -print -quit)
-     if [ -n "$DEFCONFIG_PATH" ]; then
-      DEFCONFIGS="$DEFCONFIGS ${DEFCONFIG_PATH#$DEFCONFIG_DIR/}"
-     else
-      echo "Error: No such defconfig name '$muti_defconfigs'"
-      continue 2
-     fi
-    done
-    DEFCONFIG="${DEFCONFIGS# }"
-    echo "Use '$DEFCONFIG' as defconfig"
-    break
-   fi
-  else
-   echo -e "\nDefconfig is necessary when building the kernel"
+  read -p "Enter defconfig (supports multiple, space-separated): " user_input
+        
+  if [ -z "$user_input" ]; then
+   echo -e "\nDefconfig is necessary when building the kernel."
+   continue
   fi
- done
-else
- DEFCONFIGS=
- for muti_defconfigs in $DEFCONFIG; do
-  DEFCONFIG_PATH=$(find "$DEFCONFIG_DIR" -type f -name "$muti_defconfigs" -print -quit)
-  if [ -n "$DEFCONFIG_PATH" ]; then
-   DEFCONFIGS="$DEFCONFIGS ${DEFCONFIG_PATH#$DEFCONFIG_DIR/}"
-  else
-   echo "Error: No such defconfig name '$muti_defconfigs'"
-   exit 1
-  fi
- done
- DEFCONFIG="${DEFCONFIGS# }"
- echo "Use '$DEFCONFIG' as defconfig"
-fi
 
-if [ -z "$CUSTOM_DEFCONFIG" ]; then
- while true; do
-  if read -t 10 -p "Enter custom defconfig (support multiple): " CUSTOM_DEFCONFIG; then
-   if [ -z "$CUSTOM_DEFCONFIG" ]; then
-    echo -e "\nYou do not use custom defconfig"
-    break
-   else
-    DEFCONFIGS=
-    for muti_defconfigs in $CUSTOM_DEFCONFIG; do
-     DEFCONFIG_PATH=$(find "$DEFCONFIG_DIR" -type f -name "$muti_defconfigs" -print -quit)
-     if [ -n "$DEFCONFIG_PATH" ]; then
-      DEFCONFIGS="$DEFCONFIGS ${DEFCONFIG_PATH#$DEFCONFIG_DIR/}"
-     else
-      echo "Error: No such defconfig name '$muti_defconfigs'"
-      continue 2
-     fi
-    done
-    CUSTOM_DEFCONFIG="${DEFCONFIGS# }"
-    echo "Use '$CUSTOM_DEFCONFIG' as custom defconfig"
-    break
-   fi
-  else
-   echo -e "\nYou do not use custom defconfig"
+  if validate_defconfigs "$user_input"; then
+   DEFCONFIG="$VALID_DEFCONFIG_NAMES"
+   echo "Use '$DEFCONFIG' as defconfig"
    break
   fi
  done
 else
- DEFCONFIGS=
- for muti_defconfigs in $DEFCONFIG; do
-  DEFCONFIG_PATH=$(find "$DEFCONFIG_DIR" -type f -name "$muti_defconfigs" -print -quit)
-  if [ -n "$DEFCONFIG_PATH" ]; then
-   DEFCONFIGS="$DEFCONFIGS ${DEFCONFIG_PATH#$DEFCONFIG_DIR/}"
-  else
-   echo "Error: No such defconfig name '$muti_defconfigs'"
-   exit 1
-  fi
- done
- CUSTOM_DEFCONFIG="${DEFCONFIGS# }"
- echo "Use '$CUSTOM_DEFCONFIG' as custom defconfig"
+ if ! validate_defconfigs "$DEFCONFIG"; then
+  exit 1
+ fi
+ DEFCONFIG="$VALID_DEFCONFIG_NAMES"
+ echo "Use '$DEFCONFIG' as defconfig"
 fi
 
 export ARCH=arm64
