@@ -115,18 +115,9 @@ fi
 extract_toolchain_path "CROSS_COMPILE"
 extract_toolchain_path "CROSS_COMPILE_ARM32"
 extract_toolchain_path "CLANG_TRIPLE"
-if [ -n "$CLANG_TRIPLE" ]; then
- export CLANG_TRIPLE=aarch64-linux-gnu-
-fi
 
 if [ ! -d "$CLANG_DIR" ]; then get_clang; fi
-
-if [[ "$VERSION" -eq "4" && "$PATCH_LEVEL" -le "14" ]]; then
- build_gcc
- if [ ! -d "$GCC_DIR" ]; then get_gcc; fi
-else
- build_without_gcc
-fi
+if [ ! -d "$GCC_DIR" ]; then get_gcc; fi
 
 if [ -z "$CUSTOM_DEFCONFIG" ]; then
  while true; do
@@ -180,6 +171,11 @@ export CCACHE_EXEC=/usr/bin/ccache
 ccache -M 50G
 
 build_kernel () {
+    BUILD_OPTIONS=(
+     -C "${KERNEL_DIR}"
+     O="${KERNEL_DIR}/out"
+     -j"$(nproc)"
+    )
     # Make with configuration.
     if [ -z "$CUSTOM_DEFCONFIG" ]; then
      make "${BUILD_OPTIONS[@]}" $DEFCONFIG 2>&1 | tee build.log
