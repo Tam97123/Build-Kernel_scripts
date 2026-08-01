@@ -62,7 +62,6 @@ build_without_gcc () {
      -C "${KERNEL_DIR}"
      O="${KERNEL_DIR}/out"
      -j"$(nproc)"
-     ARCH=arm64
      LLVM=1
      LLVM_IAS=1
      CC="ccache ${CLANG_DIR}/bin/clang"
@@ -76,7 +75,7 @@ get_gcc() {
      echo "Error: Can not download the file!"
      exit 1
     fi
-    source ./get_gcc.sh
+    source get_gcc.sh
     rm -f get_gcc.sh
 }
 
@@ -86,7 +85,7 @@ get_clang () {
      echo "Error: Can not download the file!"
      exit 1
     fi
-    source ./get_clang.sh
+    source get_clang.sh
     rm -f get_clang.sh
 }
 
