@@ -1,6 +1,6 @@
 #!/bin/bash
 
-CLANG_NAME=$(grep -hoE 'clang-r[0-9]+[a-z]*' "$KERNEL_DIR"/build.config.* | head -n 1)
+CLANG_NAME="${CLANG_NAME:-$(grep -hoE 'clang-r[0-9]+[a-z]*' "$KERNEL_DIR"/build.config.* 2>/dev/null | head -n 1)}"
 
 if [ -z "$CLANG_NAME" ]; then
  echo "Error: Can not identify clang name."
