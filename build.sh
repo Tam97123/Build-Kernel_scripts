@@ -122,11 +122,11 @@ if [ -z "$DEFCONFIG" ]; then
     DEFCONFIGS=
     for muti_defconfigs in $DEFCONFIG; do
      DEFCONFIG_PATH=$(find "$DEFCONFIG_DIR" -type f -name "$muti_defconfigs" -print -quit)
-     if [ -z "$DEFCONFIG_PATH" ]; then
+     if [ -n "$DEFCONFIG_PATH" ]; then
+      DEFCONFIGS="$DEFCONFIGS ${DEFCONFIG_PATH#$DEFCONFIG_DIR/}"
+     else
       echo "Error: No such defconfig name '$muti_defconfigs'"
       continue 2
-     else
-      DEFCONFIGS="$DEFCONFIGS ${DEFCONFIG_PATH#$DEFCONFIG_DIR/}"
      fi
     done
     DEFCONFIG="${DEFCONFIGS# }"
@@ -141,11 +141,11 @@ else
  DEFCONFIGS=
  for muti_defconfigs in $DEFCONFIG; do
   DEFCONFIG_PATH=$(find "$DEFCONFIG_DIR" -type f -name "$muti_defconfigs" -print -quit)
-  if [ -z "$DEFCONFIG_PATH" ]; then
+  if [ -n "$DEFCONFIG_PATH" ]; then
+   DEFCONFIGS="$DEFCONFIGS ${DEFCONFIG_PATH#$DEFCONFIG_DIR/}"
+  else
    echo "Error: No such defconfig name '$muti_defconfigs'"
    exit 1
-  else
-   DEFCONFIGS="$DEFCONFIGS ${DEFCONFIG_PATH#$DEFCONFIG_DIR/}"
   fi
  done
  DEFCONFIG="${DEFCONFIGS# }"
