@@ -2,12 +2,6 @@
 set -euo pipefail
 
 KERNEL_DIR=$(pwd)
-README_FILE=$(find "$(dirname "$KERNEL_DIR")" -name "README_Kernel.txt" -print -quit)
-if [ -z "$README_FILE" ]; then
-    echo "Error: It is necessary to follow README from SAMSUNG (README_Kernel.txt not found)."
-    exit 1
-fi
-
 KERNEL_VERSION=$( (head -n 3 Makefile | awk '/^VERSION|PATCHLEVEL/ {print $3}' | paste -sd '.') || true )
 TOOLCHAIN=$KERNEL_DIR/toolchain
 GCC_DIR=$TOOLCHAIN_DIR/gcc/linux-x86
@@ -18,8 +12,8 @@ CUSTOM_DEFCONFIG=
 
 DEFCONFIG=$(grep -oE '[a-zA-Z0-9_-]+_defconfig' "$README_FILE" | head -n 1)
 if [ -z "$DEFCONFIG" ]; then
-    echo "Error: Could not find defconfig to use in README."
-    exit 1
+ echo "Error: Could not find defconfig to use in README."
+ exit 1
 fi
 
 # Function to detect OS and install dependencies
@@ -77,7 +71,7 @@ get_gcc() {
      echo "Error: Can not download the file!"
      exit 1
     fi
-    source ./get_gcc.sh
+    source get_gcc.sh
     rm -f get_gcc.sh
 }
 
@@ -87,7 +81,7 @@ get_clang () {
      echo "Error: Can not download the file!"
      exit 1
     fi
-    source ./get_clang.sh
+    source get_clang.sh
     rm -f get_clang.sh
 }
 
@@ -95,6 +89,16 @@ if [ -z "$KERNEL_VERSION" ]; then
  echo "Error: Can not detect kernel version!"
  exit 1
 else
+ if [ ! -f "build_kernel.sh" ]; then
+  echo "Error: Build script is necessary from SAMSUNG (build_kernel.sh not found)."
+  exit 1
+ fi
+
+ README_FILE=$(find "$(dirname "$KERNEL_DIR")" -name "README_Kernel.txt" -print -quit)
+ if [ -z "$README_FILE" ]; then
+  echo "Error: It is necessary to follow README from SAMSUNG (README_Kernel.txt not found)."
+  exit 1
+ fi
  VERSION=$(echo "$KERNEL_VERSION" | awk -F '.' '{print $1}')
  PATCH_LEVEL=$(echo "$KERNEL_VERSION" | awk -F '.' '{print $2}')
  if [[ ( "$VERSION" -eq "5" && "$PATCH_LEVEL" -gt "4" ) || "$VERSION" -gt "5" ]]; then
@@ -116,7 +120,19 @@ extract_toolchain_path "CROSS_COMPILE"
 extract_toolchain_path "CROSS_COMPILE_ARM32"
 extract_toolchain_path "CLANG_TRIPLE"
 
-if [ ! -d "$CLANG_DIR" ]; then get_clang; fi
+if [ ! -d "$CLANG_DIR" ]; then
+ CLANG_NAME="$(grep -hoE 'clang-r[0-9]+[a-z]*' "$README_FILE" 2>/dev/null | head -n 1)}"
+ if [ "$VERSION" = "5" && "$PATCH_LEVEL" = "4" && -z "$CLANG_NAME" ]; then
+  curl -LO https://github.com/ravindu644/Android-Kernel-Tutorials/releases/download/toolchains/llvm-arm-toolchain-ship-10.0.9.tar.gz
+  tar -xzf llvm-arm-toolchain-ship-10.0.9.tar.gz -C "$CLANG_DIR"
+  rm -f llvm-arm-toolchain-ship-10.0.9.tar.gz
+ elif [ -n "$CLANG_NAME" ]; then
+  get_clang
+ else
+  echo "Error: Can not identify clang name."
+  exit 1
+ fi
+fi
 if [ ! -d "$GCC_DIR" ]; then get_gcc; fi
 
 if [ -z "$CUSTOM_DEFCONFIG" ]; then
@@ -164,6 +180,7 @@ export ARCH=arm64
 export KBUILD_BUILD_USER="@Tam97123"
 export PATH="${CLANG_DIR}/bin:${PATH}"
 export LD_LIBRARY_PATH="${CLANG_DIR}/lib:${CLANG_DIR}/lib64:${LD_LIBRARY_PATH:-}"
+eval "$(grep '^export ' "$KERNEL_DIR/build_kernel.sh" )"
 
 # Use ccache to speed up build
 export USE_CCACHE=1
