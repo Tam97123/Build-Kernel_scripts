@@ -59,8 +59,6 @@ extract_toolchain_path() {
 
    local toolchain_path
    toolchain_path=$(echo "$toolchain_line" | sed -n "s/.*${toolchain}=\/usr\/local\([^ ]*\).*/\1/p")
-
-   declare -g "$toolchain"="${KERNEL_DIR}${toolchain_path}"
    export "$toolchain"
   fi
 }
@@ -89,7 +87,9 @@ if [ -z "$KERNEL_VERSION" ]; then
  echo "Error: Can not detect kernel version!"
  exit 1
 else
- if [ ! -f "build_kernel.sh" ]; then
+ if [ -f "build_kernel.sh" ]; then
+  BUILD_SCRIPTS="$(realpath build_kernel.sh)"
+ else
   echo "Error: Build script is necessary from SAMSUNG (build_kernel.sh not found)."
   exit 1
  fi
@@ -110,30 +110,31 @@ else
 fi
 
 extract_toolchain_path "CC"
-if [ -n "$CC" ]; then
- CLANG_DIR="${CC%/bin/clang}"
-else
- echo "Error: Invalid clang path"
- exit 1
-fi
 extract_toolchain_path "CROSS_COMPILE"
-extract_toolchain_path "CROSS_COMPILE_ARM32"
 extract_toolchain_path "CLANG_TRIPLE"
 
-if [ ! -d "$CLANG_DIR" ]; then
- CLANG_NAME="$(grep -hoE 'clang-r[0-9]+[a-z]*' "$README_FILE" 2>/dev/null | head -n 1)}"
- if [ "$VERSION" = "5" && "$PATCH_LEVEL" = "4" && -z "$CLANG_NAME" ]; then
-  curl -LO https://github.com/ravindu644/Android-Kernel-Tutorials/releases/download/toolchains/llvm-arm-toolchain-ship-10.0.9.tar.gz
-  tar -xzf llvm-arm-toolchain-ship-10.0.9.tar.gz -C "$CLANG_DIR"
-  rm -f llvm-arm-toolchain-ship-10.0.9.tar.gz
- elif [ -n "$CLANG_NAME" ]; then
-  get_clang
- else
+if [ -n "$CC" ]; then
+ CLANG_DIR="${CC%/bin/clang}"
+ if [ ! -d "$CLANG_DIR" ]; then
+  CLANG_NAME="$(grep -hoE 'clang-r[0-9]+[a-z]*' "$README_FILE" 2>/dev/null | head -n 1)}"
+  if [ "$VERSION" = "5" && "$PATCH_LEVEL" = "4" && -z "$CLANG_NAME" ]; then
+   curl -LO https://github.com/ravindu644/Android-Kernel-Tutorials/releases/download/toolchains/llvm-arm-toolchain-ship-10.0.9.tar.gz
+   tar -xzf llvm-arm-toolchain-ship-10.0.9.tar.gz -C "$CLANG_DIR"
+   rm -f llvm-arm-toolchain-ship-10.0.9.tar.gz
+  elif [ -n "$CLANG_NAME" ]; then
+   get_clang
+  else
   echo "Error: Can not identify clang name."
+  exit 1
+ else
+  echo "Error: Invalid clang path"
   exit 1
  fi
 fi
-if [ ! -d "$GCC_DIR" ]; then get_gcc; fi
+
+if [ ! -d "$GCC_DIR" ]; then
+ if
+fi
 
 if [ -z "$CUSTOM_DEFCONFIG" ]; then
  while true; do
@@ -180,7 +181,8 @@ export ARCH=arm64
 export KBUILD_BUILD_USER="@Tam97123"
 export PATH="${CLANG_DIR}/bin:${PATH}"
 export LD_LIBRARY_PATH="${CLANG_DIR}/lib:${CLANG_DIR}/lib64:${LD_LIBRARY_PATH:-}"
-eval "$(grep '^export ' "$KERNEL_DIR/build_kernel.sh" )"
+eval "$(grep '^export ' "$BUILD_SCRIPTS" )"
+export CLANG_TRIPLE="aarch64-linux-gnu-"
 
 # Use ccache to speed up build
 export USE_CCACHE=1
