@@ -154,34 +154,43 @@ fi
 
 if [ -z "$CUSTOM_DEFCONFIG" ]; then
  while true; do
-  if read -t 10 -p "Enter custom defconfig: " CUSTOM_DEFCONFIG; then
+  if read -t 10 -p "Enter custom defconfig (support multiple): " CUSTOM_DEFCONFIG; then
    if [ -z "$CUSTOM_DEFCONFIG" ]; then
     echo -e "\nYou do not use custom defconfig"
     break
    else
-    DEFCONFIG_PATH=$(find "$DEFCONFIG_DIR" -type f -name "$CUSTOM_DEFCONFIG" -print -quit)
-    if [ -n "$DEFCONFIG_PATH" ]; then
-     CUSTOM_DEFCONFIG="${DEFCONFIG_PATH#$DEFCONFIG_DIR/}"
-     echo "Use '$CUSTOM_DEFCONFIG' as custom defconfig"
-     break
-    else
-     echo "Error: No such defconfig name '$CUSTOM_DEFCONFIG'"
-    fi
+    DEFCONFIGS=
+    for muti_defconfigs in $CUSTOM_DEFCONFIG; do
+     DEFCONFIG_PATH=$(find "$DEFCONFIG_DIR" -type f -name "$muti_defconfigs" -print -quit)
+     if [ -n "$DEFCONFIG_PATH" ]; then
+      DEFCONFIGS="$DEFCONFIGS ${DEFCONFIG_PATH#$DEFCONFIG_DIR/}"
+     else
+      echo "Error: No such defconfig name '$muti_defconfigs'"
+      continue 2
+     fi
+    done
+    CUSTOM_DEFCONFIG="${DEFCONFIGS# }"
+    echo "Use '$CUSTOM_DEFCONFIG' as custom defconfig"
+    break
    fi
-  else 
+  else
    echo -e "\nYou do not use custom defconfig"
    break
   fi
  done
 else
- DEFCONFIG_PATH=$(find "$DEFCONFIG_DIR" -type f -name "$CUSTOM_DEFCONFIG" -print -quit)
- if [ -n "$DEFCONFIG_PATH" ]; then
-  CUSTOM_DEFCONFIG="${DEFCONFIG_PATH#$DEFCONFIG_DIR/}"
-  echo "Use '$CUSTOM_DEFCONFIG' as custom defconfig"
- else
-  echo "Error: No such defconfig name '$CUSTOM_DEFCONFIG'"
-  exit 1
- fi
+ DEFCONFIGS=
+ for muti_defconfigs in $DEFCONFIG; do
+  DEFCONFIG_PATH=$(find "$DEFCONFIG_DIR" -type f -name "$muti_defconfigs" -print -quit)
+  if [ -n "$DEFCONFIG_PATH" ]; then
+   DEFCONFIGS="$DEFCONFIGS ${DEFCONFIG_PATH#$DEFCONFIG_DIR/}"
+  else
+   echo "Error: No such defconfig name '$muti_defconfigs'"
+   exit 1
+  fi
+ done
+ CUSTOM_DEFCONFIG="${DEFCONFIGS# }"
+ echo "Use '$CUSTOM_DEFCONFIG' as custom defconfig"
 fi
 
 export ARCH=arm64
