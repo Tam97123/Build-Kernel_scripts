@@ -3,9 +3,9 @@ REJECT_DIR=$KERNEL_DIR/patch_rejects
 
 # Integrate KernelSU (ReSukiSU)
 if [ ! -d "$KERNEL_DIR/KernelSU" ]; then
- echo "Downloading KernelSU..."
+ echo "[+] Downloading KernelSU..."
  if ! curl -LSs "https://raw.githubusercontent.com/ReSukiSU/ReSukiSU/main/kernel/setup.sh" | bash; then
-  echo "Error: Can not download KernelSU"
+  echo "[-] Error: Can not download KernelSU" >&2
   exit 1
  fi
 elif [ -f "$KERNEL_DIR/KernelSU/kernel/Kbuild" ]; then
@@ -17,7 +17,7 @@ fi
 if [ ! -f "$KERNEL_DIR/susfs_inline_hook_patches.sh" ]; then
  echo "Downloading script..."
  if ! curl -LO https://raw.githubusercontent.com/JackA1ltman/NonGKI_Kernel_Build_2nd/refs/heads/mainline/Patches/susfs_inline_hook_patches.sh; then
-  echo "Error: Can not download script."
+  echo "[-] Error: Can not download script." >&2
   exit 1
  fi
  chmod +x susfs_inline_hook_patches.sh && bash susfs_inline_hook_patches.sh
@@ -25,7 +25,7 @@ fi
  if [ ! -f "$KERNEL_DIR/susfs_patch_to_$VERSION.$PATCH_LEVEL.patch" ]; then
  echo "Downloading patch..."
  if ! curl -LO https://raw.githubusercontent.com/JackA1ltman/NonGKI_Kernel_Build_2nd/refs/heads/mainline/Patches/Patch/susfs_patch_to_$VERSION.$PATCH_LEVEL.patch; then
-  echo "Error: Can not download patch"
+  echo "[-] Error: Can not download patch" >&2
   exit 1
  fi
  patch -p1 < "susfs_patch_to_$VERSION.$PATCH_LEVEL.patch" || true
@@ -62,7 +62,7 @@ if [ ${#REJ_FILES[@]} -gt 0 ]; then
     delete_rejects
     break
    elif [[ "$COLLECT_REJECTS" =~ ^[Nn]$ ]]; then
-    echo "[-] Collecting rejects and it's original files into $REJECT_DIR. Aborting..."
+    echo "[-] Collecting rejects and it's original files into $REJECT_DIR. Aborting..." >&2
     move_rejects
     exit 1
    else
