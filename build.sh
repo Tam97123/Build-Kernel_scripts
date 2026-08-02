@@ -18,35 +18,6 @@ GCC32=false
 # Hardcode this variable if you dont want prompt
 DEFCONFIG=
 
-# ==============================================================================
-# 1. DEPENDENCIES & OS CHECK
-# ==============================================================================
-install_dependencies () {
-    echo "================================================="
-    echo "[+] Detecting OS and installing dependencies..."
-    if command -v apt &> /dev/null; then
-        echo "[+] Ubuntu/Debian-based system detected, using apt..."
-        sudo apt update && sudo apt install -y git device-tree-compiler lz4 xz-utils zlib1g-dev openjdk-17-jdk gcc g++ python3 python-is-python3 p7zip-full android-sdk-libsparse-utils erofs-utils \
-            default-jdk gnupg flex bison gperf build-essential zip curl ccache libc6-dev libncurses-dev libx11-dev libreadline-dev libgl1 libgl1-mesa-dev \
-            make sudo bc grep tofrodos python3-markdown libxml2-utils xsltproc libtinfo6 \
-            repo cpio kmod openssl libelf-dev pahole libssl-dev libarchive-tools zstd libyaml-dev --fix-missing
-        
-        wget -q http://mirrors.kernel.org/ubuntu/pool/universe/n/ncurses/libtinfo5_6.3-2ubuntu0.2_amd64.deb && sudo dpkg -i libtinfo5_6.3-2ubuntu0.2_amd64.deb && rm -f libtinfo5_6.3-2ubuntu0.2_amd64.deb
-    elif command -v dnf &> /dev/null; then
-        echo "[+] Fedora/RHEL-based system detected, using dnf..."
-        sudo dnf group install -y "c-development" "development-tools"
-        sudo dnf install -y dtc lz4 xz zlib-devel java-latest-openjdk-devel python3 \
-            p7zip p7zip-plugins android-tools erofs-utils \
-            ncurses-devel ccache libX11-devel readline-devel mesa-libGL-devel python3-markdown \
-            libxml2 libxslt dos2unix kmod openssl elfutils-libelf-devel dwarves \
-            openssl-devel libarchive zstd rsync libyaml-devel openssl-devel-engine --skip-unavailable
-    else
-        echo "[-] Error: Can not determine package manager, please install dependencies manually." >&2
-        exit 1
-    fi
-    touch .requirements
-}
-
 get_script() {
  local script_name="$1"
  echo "[+] Downloading $script_name..."
@@ -56,6 +27,34 @@ get_script() {
   fi
   source "$script_name"
   rm -f "$script_name"
+}
+
+# ==============================================================================
+# 1. DEPENDENCIES & OS CHECK
+# ==============================================================================
+install_dependencies () {
+    echo "================================================="
+    echo "[+] Detecting OS and installing dependencies..."
+    if command -v apt &> /dev/null; then
+     echo "[+] Ubuntu/Debian-based system detected, using apt..."
+     sudo apt update && sudo apt install -y git device-tree-compiler lz4 xz-utils zlib1g-dev openjdk-17-jdk gcc g++ python3 python-is-python3 p7zip-full android-sdk-libsparse-utils erofs-utils \
+      default-jdk gnupg flex bison gperf build-essential zip curl ccache libc6-dev libncurses-dev libx11-dev libreadline-dev libgl1 libgl1-mesa-dev \
+      make sudo bc grep tofrodos python3-markdown libxml2-utils xsltproc libtinfo6 \
+      repo cpio kmod openssl libelf-dev pahole libssl-dev libarchive-tools zstd libyaml-dev --fix-missing  
+     wget -q http://mirrors.kernel.org/ubuntu/pool/universe/n/ncurses/libtinfo5_6.3-2ubuntu0.2_amd64.deb && sudo dpkg -i libtinfo5_6.3-2ubuntu0.2_amd64.deb && rm -f libtinfo5_6.3-2ubuntu0.2_amd64.deb
+    elif command -v dnf &> /dev/null; then
+     echo "[+] Fedora/RHEL-based system detected, using dnf..."
+     sudo dnf group install -y "c-development" "development-tools"
+     sudo dnf install -y dtc lz4 xz zlib-devel java-latest-openjdk-devel python3 \
+      p7zip p7zip-plugins android-tools erofs-utils \
+      ncurses-devel ccache libX11-devel readline-devel mesa-libGL-devel python3-markdown \
+      libxml2 libxslt dos2unix kmod openssl elfutils-libelf-devel dwarves \
+      openssl-devel libarchive zstd rsync libyaml-devel openssl-devel-engine --skip-unavailable
+    else
+     echo "[-] Error: Can not determine package manager, please install dependencies manually." >&2
+     exit 1
+    fi
+    touch .requirements
 }
 
 if [ ! -f ".requirements" ]; then install_dependencies; fi
@@ -167,25 +166,20 @@ BUILD_OPTIONS=(
     CLANG_TRIPLE="${CLANG_TRIPLE}"
 )
 
-# Apply 64-bit compiler
-if [ "$GCC64" = true ] && [ "$ARCH" = "arm64" ]; then
-    export CROSS_COMPILE="${GCC_DIR}/aarch64/bin/aarch64-linux-android-"
-    BUILD_OPTIONS+=( CROSS_COMPILE="${CROSS_COMPILE}" )
+if [[ "$VERSION" -gt "4" ]] || [[ "$VERSION" -eq "4" && "$PATCHLEVEL" -ge "19" ]]; then
+ BUILD_OPTIONS+=( LLVM=1 LLVM_IAS=1 )
+elif [ "$ARCH" = "arm64" ]; then
+ export CROSS_COMPILE="${GCC_DIR}/aarch64/bin/aarch64-linux-android-"
+ BUILD_OPTIONS+=( CROSS_COMPILE="${CROSS_COMPILE}" )
 else
-    # Pure LLVM builds (Kernel 4.19+), or 32-bit kernels
-    BUILD_OPTIONS+=( LLVM=1 LLVM_IAS=1 )
+ export CROSS_COMPILE="${GCC_DIR}/arm/bin/arm-linux-androideabi-"
+ BUILD_OPTIONS+=( CROSS_COMPILE="${CROSS_COMPILE}" )
 fi
 
-# Apply 32-bit compiler
 if [ "$GCC32" = true ]; then
-    export CROSS_COMPILE_ARM32="${GCC_DIR}/arm32/bin/arm-linux-androideabi-"
-    export CROSS_COMPILE_COMPAT="${GCC_DIR}/arm32/bin/arm-linux-androideabi-"
-    BUILD_OPTIONS+=( CROSS_COMPILE_ARM32="${CROSS_COMPILE_ARM32}" CROSS_COMPILE_COMPAT="${CROSS_COMPILE_COMPAT}" )
-    
-    # If the main architecture is purely 32-bit, set it as the primary cross compiler
-    if [ "$ARCH" = "arm" ]; then
-        BUILD_OPTIONS+=( CROSS_COMPILE="${CROSS_COMPILE_ARM32}" )
-    fi
+ export CROSS_COMPILE_ARM32="${GCC_DIR}/arm/bin/arm-linux-androideabi-"
+ export CROSS_COMPILE_COMPAT="${GCC_DIR}/arm/bin/arm-linux-androideabi-"
+ BUILD_OPTIONS+=( CROSS_COMPILE_ARM32="${CROSS_COMPILE_ARM32}" CROSS_COMPILE_COMPAT="${CROSS_COMPILE_COMPAT}" )
 fi
 
 # ==============================================================================
@@ -194,7 +188,8 @@ fi
 export KBUILD_BUILD_USER="@Tam97123"
 export PATH="${CLANG_DIR}/bin:${PATH}"
 export LD_LIBRARY_PATH="${CLANG_DIR}/lib:${CLANG_DIR}/lib64:${LD_LIBRARY_PATH:-}"
-# Export ccache so next time build will be faster
+
+# Export ccache to speed up building
 export USE_CCACHE=1
 export CCACHE_EXEC=$(command -v ccache || echo "/usr/bin/ccache")
 ccache -M 50G >/dev/null
