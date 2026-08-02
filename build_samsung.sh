@@ -2,6 +2,16 @@
 set -euo pipefail
 
 KERNEL_DIR=$(pwd)
+README_FILE=$(find "$(dirname "$KERNEL_DIR")" -name "README_Kernel.txt" -print -quit 2>/dev/null || echo "")
+if [ -z "$README_FILE" ]; then
+ echo "[-] Error: It is necessary to follow README from SAMSUNG (README_Kernel.txt not found)" >&2
+ exit 1
+fi
+if [ ! -f "$KERNEL_DIR/build_kernel.sh" ]; then
+ echo "Error: Build script is necessary from SAMSUNG (build_kernel.sh not found)."
+ exit 1
+fi
+
 VERSION=$(grep -w '^VERSION' Makefile | tr -d ' ' | cut -d= -f2 || echo "")
 PATCHLEVEL=$(grep -w '^PATCHLEVEL' Makefile | tr -d ' ' | cut -d= -f2 || echo "")
 KERNEL_VERSION="${VERSION}.${PATCHLEVEL}"
@@ -16,7 +26,7 @@ DEFCONFIG_DIR=(
 GCC64=false
 GCC32=false
 # Hardcode this variable if you dont want prompt
-DEFCONFIG=
+CUSTOM_DEFCONFIG=
 
 get_script() {
  local script_name="$1"
@@ -73,7 +83,31 @@ else
 fi
 
 # ==============================================================================
-# 3. CHECK DEFCONFIG
+# 3. README FROM SAMSUNG
+# ==============================================================================
+extract_toolchain_path() {
+    local toolchain="$1"
+
+    if grep -q "$toolchain" "$README_FILE"; then
+     local toolchain_line
+     toolchain_line=$(grep -m 1 "${toolchain}=/usr/local" "$README_FILE" || true)    
+     if [ -z "$toolchain_line" ]; then
+      return 0
+     fi
+
+     local toolchain_path
+     toolchain_path=$(echo "$toolchain_line" | sed -n "s/.*${toolchain}=\/usr\/local\([^ ]*\).*/\1/p")
+     export "$toolchain"="$toolchain_path"
+    fi
+}
+
+extract_toolchain_path "CC"
+extract_toolchain_path "CROSS_COMPILE"
+extract_toolchain_path "CROSS_COMPILE_ARM32"
+extract_toolchain_path "CLANG_TRIPLE"
+
+# ==============================================================================
+# 4. CHECK DEFCONFIG
 # ==============================================================================
 validate_defconfigs() {
     local input_configs="$1"
@@ -81,10 +115,10 @@ validate_defconfigs() {
     local valid_paths=""
 
     for config in $input_configs; do
-     local config_path=$(find "${DEFCONFIG_DIR[@]}" -type f -name "$config" -print -quit 2>/dev/null)
-     if [ -n "$config_path" ]; then
-      valid_names="$valid_names $(basename "$config_path")"
-      valid_paths="$valid_paths $config_path"
+     local config_paths=$(find "${DEFCONFIG_DIR[@]}" -type f -name "$config" -print -quit 2>/dev/null)
+     if [ -n "$config_paths" ]; then
+      valid_names="$valid_names $(basename "$config_paths")"
+      valid_paths="$valid_paths $config_paths"
      else
       echo "[-] Error: No such defconfig name '$config'" >&2
       return 1
@@ -95,59 +129,100 @@ validate_defconfigs() {
     return 0
 }
 
+DEFCONFIG=$(grep -oE '[a-zA-Z0-9_-]+_defconfig' "$README_FILE" 2>/dev/null | head -n 1)
 if [ -z "$DEFCONFIG" ]; then
+ echo "[-] Error: Could not find defconfig to use in README." >&2
+ exit 1
+fi
+
+if ! validate_defconfigs "$DEFCONFIG"; then
+ echo "[-] Error: Can not find '$DEFCONFIG' in kernel source tree" >&2
+ exit 1
+else
+ DEFCONFIG="$VALID_DEFCONFIG_NAMES"
+ DEFCONFIG_PATHS="$VALID_DEFCONFIG_PATHS"
+ echo "[+] Using '$DEFCONFIG' as defconfig"
+fi
+
+if [ -z "$CUSTOM_DEFCONFIG" ]; then
  while true; do
-  read -p "Enter defconfig (supports multiple, space-separated): " user_input
+  read -p "Enter custom defconfig (supports multiple, space-separated): " user_input
    if [ -z "$user_input" ]; then
-    echo -e "\nDefconfig is necessary when building the kernel."
-    continue
+    echo -e "\nYou do not use custom defconfig"
+    break
    fi
    if validate_defconfigs "$user_input"; then
-    DEFCONFIG="$VALID_DEFCONFIG_NAMES"
+    CUSTOM_DEFCONFIG="$VALID_DEFCONFIG_NAMES"
+    DEFCONFIG_PATHS="$DEFCONFIG_PATHS $VALID_DEFCONFIG_PATHS"
     break
   fi
  done
 else
- if ! validate_defconfigs "$DEFCONFIG"; then exit 1; fi
- DEFCONFIG="$VALID_DEFCONFIG_NAMES"
+ if ! validate_defconfigs "$CUSTOM_DEFCONFIG"; then exit 1; fi
+ CUSTOM_DEFCONFIG="$VALID_DEFCONFIG_NAMES"
+ DEFCONFIG_PATHS="$DEFCONFIG_PATHS $VALID_DEFCONFIG_PATHS"
 fi
-echo "[+] Using '$DEFCONFIG' as defconfig"
+echo "[+] Using '$CUSTOM_DEFCONFIG' as custom defconfig"
 
 # ==============================================================================
-# 4. DETECT ARCHITECTURE
+# 5. DETECT ARCHITECTURE
 # ==============================================================================
 check_flag() {
     local flag="$1"
-    for path in $VALID_DEFCONFIG_PATHS; do
+    for path in $DEFCONFIG_PATHS; do
      if grep -q "$flag" "$path" 2>/dev/null; then return 0; fi
     done
     return 1
 }
 
-if check_flag "CONFIG_ARM64=y"; then
- export ARCH=arm64
- export CLANG_TRIPLE="aarch64-linux-gnu-"
- echo "[+] Detected 64-bit Kernel (arm64)"
- if [[ "$VERSION" -eq "4" && "$PATCHLEVEL" -le "14" ]]; then 
-  GCC64=true
- fi
-    
- if check_flag "CONFIG_COMPAT_VDSO=y"; then
-  GCC32=true
-  echo "[+] CONFIG_COMPAT_VDSO enabled. Kernel needs 64-bit & 32-bit GCC."
- fi
+README_ARCH=$(grep -E '^export ARCH=' "$KERNEL_DIR/build_kernel.sh" | cut -d= -f2 | tr -d '"' | tr -d "'" | tr -d ' ' || echo "")
+
+if [ -n "$README_ARCH" ]; then
+ export ARCH="$README_ARCH"
+ if [ "$ARCH" = "arm64" ]; then
+  export CLANG_TRIPLE="aarch64-linux-gnu-"
+   if [[ "$VERSION" -eq "4" && "$PATCHLEVEL" -le "14" ]]; then GCC64=true; fi
+   if check_flag "CONFIG_COMPAT_VDSO=y"; then GCC32=true; fi
+  else
+   export CLANG_TRIPLE="arm-linux-gnueabi-"
+   GCC64=false
+   GCC32=true
+  fi
 else
- export ARCH=arm
- export CLANG_TRIPLE="arm-linux-gnueabi-"
- GCC64=false
- GCC32=true
- echo "[+] Detected 32-bit Kernel (arm). Kernel only needs 32-bit GCC."
+ if check_flag "CONFIG_ARM64=y"; then
+  export ARCH=arm64
+  export CLANG_TRIPLE="aarch64-linux-gnu-"
+  if [[ "$VERSION" -eq "4" && "$PATCHLEVEL" -le "14" ]]; then GCC64=true; fi
+  if check_flag "CONFIG_COMPAT_VDSO=y"; then GCC32=true; fi
+ else
+  export ARCH=arm
+  export CLANG_TRIPLE="arm-linux-gnueabi-"
+  GCC64=false
+  GCC32=true
+ fi
 fi
 
 # ==============================================================================
-# 5. DOWNLOAD TOOLCHAIN
+# 6. DOWNLOAD TOOLCHAIN
 # ==============================================================================
-if [ ! -d "$CLANG_DIR" ]; then get_script "get_clang.sh"; fi
+# Download clang
+if [ -n "${CC:-}" ]; then
+ CLANG_DIR="${CC%/bin/clang}"
+else
+ CLANG_DIR="$TOOLCHAIN_DIR/clang"
+fi
+CLANG_NAME="$(grep -hoE 'clang-r[0-9]+[a-z]*' "$README_FILE" 2>/dev/null | head -n 1 || echo "")"
+if [[ "$VERSION" = "5" && "$PATCHLEVEL" = "4" && -z "$CLANG_NAME" ]]; then
+ mkdir -p "$CLANG_DIR"
+ curl -LO https://github.com/ravindu644/Android-Kernel-Tutorials/releases/download/toolchains/llvm-arm-toolchain-ship-10.0.9.tar.gz
+ tar -xzf llvm-arm-toolchain-ship-10.0.9.tar.gz -C "$CLANG_DIR"
+ rm -f llvm-arm-toolchain-ship-10.0.9.tar.gz
+elif [ -n "$CLANG_NAME" ]; then
+ get_script "get_clang.sh"
+else
+ echo "Error: Can not identify clang name."
+ exit 1
+fi
 
 # Download GCC if toolchain is required
 if [ "$GCC64" = true ] || [ "$GCC32" = true ]; then
@@ -155,7 +230,7 @@ if [ "$GCC64" = true ] || [ "$GCC32" = true ]; then
 fi
 
 # ==============================================================================
-# 6. BUILD OPTIONS
+# 7. BUILD OPTIONS
 # ==============================================================================
 BUILD_OPTIONS=(
     -C "${KERNEL_DIR}"
@@ -166,28 +241,28 @@ BUILD_OPTIONS=(
     CLANG_TRIPLE="${CLANG_TRIPLE}"
 )
 
-if [[ "$VERSION" -gt "4" ]] || [[ "$VERSION" -eq "4" && "$PATCHLEVEL" -ge "19" ]]; then
+if [[ "$VERSION" -gt "4" ]] || [[ "$VERSION" -eq "4" && "$PATCHLEVEL" -gt "14" ]]; then
  BUILD_OPTIONS+=( LLVM=1 LLVM_IAS=1 )
 elif [ "$ARCH" = "arm64" ]; then
- export CROSS_COMPILE="${GCC_DIR}/aarch64/bin/aarch64-linux-android-"
+ export CROSS_COMPILE="${CROSS_COMPILE:-${GCC_DIR}/aarch64/bin/aarch64-linux-android-}"
  BUILD_OPTIONS+=( CROSS_COMPILE="${CROSS_COMPILE}" )
 else
- export CROSS_COMPILE="${GCC_DIR}/arm/bin/arm-linux-androideabi-"
+ export CROSS_COMPILE="${CROSS_COMPILE:-${GCC_DIR}/arm/bin/arm-linux-androideabi-}"
  BUILD_OPTIONS+=( CROSS_COMPILE="${CROSS_COMPILE}" )
 fi
 
 if [ "$GCC32" = true ]; then
- export CROSS_COMPILE_ARM32="${GCC_DIR}/arm/bin/arm-linux-androideabi-"
- export CROSS_COMPILE_COMPAT="${GCC_DIR}/arm/bin/arm-linux-androideabi-"
- BUILD_OPTIONS+=( CROSS_COMPILE_ARM32="${CROSS_COMPILE_ARM32}" CROSS_COMPILE_COMPAT="${CROSS_COMPILE_COMPAT}" )
+ export CROSS_COMPILE_ARM32="${CROSS_COMPILE_ARM32:-${GCC_DIR}/arm/bin/arm-linux-androideabi-}"
+ BUILD_OPTIONS+=( CROSS_COMPILE_ARM32="${CROSS_COMPILE_ARM32}" )
 fi
 
 # ==============================================================================
-# 7. BUILDING PROCESS
+# 8. BUILDING PROCESS
 # ==============================================================================
 export KBUILD_BUILD_USER="@Tam97123"
 export PATH="${CLANG_DIR}/bin:${PATH}"
 export LD_LIBRARY_PATH="${CLANG_DIR}/lib:${CLANG_DIR}/lib64:${LD_LIBRARY_PATH:-}"
+eval "$(grep '^export ' "$KERNEL_DIR/build_kernel.sh" 2>/dev/null)"
 
 # Export ccache to speed up building
 export USE_CCACHE=1
@@ -196,7 +271,7 @@ ccache -M 50G >/dev/null
 
 echo "================================================="
 echo "[+] Generating Defconfig..."
-make "${BUILD_OPTIONS[@]}" $DEFCONFIG 2>&1 | tee build.log
+make "${BUILD_OPTIONS[@]}" $DEFCONFIG $CUSTOM_DEFCONFIG 2>&1 | tee build.log
 
 echo "================================================="
 echo "[+] Compiling Kernel..."
