@@ -153,7 +153,7 @@ if [ -z "$CUSTOM_DEFCONFIG" ]; then
    fi
    if validate_defconfigs "$user_input"; then
     CUSTOM_DEFCONFIG="$VALID_DEFCONFIG_NAMES"
-    DEFCONFIG_PATHS="$DEFCONFIG $VALID_DEFCONFIG_PATHS"
+    DEFCONFIG_PATHS="$DEFCONFIG_PATHS $VALID_DEFCONFIG_PATHS"
     break
   fi
  done
@@ -213,6 +213,7 @@ else
 fi
 CLANG_NAME="$(grep -hoE 'clang-r[0-9]+[a-z]*' "$README_FILE" 2>/dev/null | head -n 1 || echo "")"
 if [[ "$VERSION" = "5" && "$PATCHLEVEL" = "4" && -z "$CLANG_NAME" ]]; then
+ mkdir -p "$CLANG_DIR"
  curl -LO https://github.com/ravindu644/Android-Kernel-Tutorials/releases/download/toolchains/llvm-arm-toolchain-ship-10.0.9.tar.gz
  tar -xzf llvm-arm-toolchain-ship-10.0.9.tar.gz -C "$CLANG_DIR"
  rm -f llvm-arm-toolchain-ship-10.0.9.tar.gz
@@ -240,18 +241,18 @@ BUILD_OPTIONS=(
     CLANG_TRIPLE="${CLANG_TRIPLE}"
 )
 
-if [[ "$VERSION" -ge "4" ]] || [[ "$VERSION" -eq "4" && "$PATCHLEVEL" -gt "14" ]]; then
+if [[ "$VERSION" -gt "4" ]] || [[ "$VERSION" -eq "4" && "$PATCHLEVEL" -gt "14" ]]; then
  BUILD_OPTIONS+=( LLVM=1 LLVM_IAS=1 )
 elif [ "$ARCH" = "arm64" ]; then
- export CROSS_COMPILE="${CROSS_COMPILE:-{GCC_DIR}/aarch64/bin/aarch64-linux-android-}"
+ export CROSS_COMPILE="${CROSS_COMPILE:-${GCC_DIR}/aarch64/bin/aarch64-linux-android-}"
  BUILD_OPTIONS+=( CROSS_COMPILE="${CROSS_COMPILE}" )
 else
- export CROSS_COMPILE="${CROSS_COMPILE:-{GCC_DIR}/arm/bin/arm-linux-androideabi-}"
+ export CROSS_COMPILE="${CROSS_COMPILE:-${GCC_DIR}/arm/bin/arm-linux-androideabi-}"
  BUILD_OPTIONS+=( CROSS_COMPILE="${CROSS_COMPILE}" )
 fi
 
 if [ "$GCC32" = true ]; then
- export CROSS_COMPILE_ARM32="${CROSS_COMPILE_ARM32:-{GCC_DIR}/arm/bin/arm-linux-androideabi-}"
+ export CROSS_COMPILE_ARM32="${CROSS_COMPILE_ARM32:-${GCC_DIR}/arm/bin/arm-linux-androideabi-}"
  BUILD_OPTIONS+=( CROSS_COMPILE_ARM32="${CROSS_COMPILE_ARM32}" )
 fi
 
