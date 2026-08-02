@@ -2,7 +2,7 @@
 set -euo pipefail
 
 KERNEL_DIR=$(pwd)
-README_FILE=$(find "$(dirname "$KERNEL_DIR")" -name "README_Kernel.txt" -print -quit 2>/dev/null)
+README_FILE=$(find "$(dirname "$KERNEL_DIR")" -name "README_Kernel.txt" -print -quit 2>/dev/null || echo "")
 if [ -z "$README_FILE" ]; then
  echo "[-] Error: It is necessary to follow README from SAMSUNG (README_Kernel.txt not found)" >&2
  exit 1
@@ -86,26 +86,24 @@ fi
 # 3. README FROM SAMSUNG
 # ==============================================================================
 extract_toolchain_path() {
-  local toolchain="$1"
+    local toolchain="$1"
 
-  if grep -q "$toolchain" "$README_FILE"; then
-   local toolchain_line
-   toolchain_line=$(grep -m 1 "${toolchain}=/usr/local" "$README_FILE" || true)    
-   if [ -z "$toolchain_line" ]; then
-    echo "Error: Can not get path from README for $toolchain"
-    exit 1
-   fi
+    if grep -q "$toolchain" "$README_FILE"; then
+     local toolchain_line
+     toolchain_line=$(grep -m 1 "${toolchain}=/usr/local" "$README_FILE" || true)    
+     if [ -z "$toolchain_line" ]; then
+      return 0
+     fi
 
-   local toolchain_path
-   toolchain_path=$(echo "$toolchain_line" | sed -n "s/.*${toolchain}=\/usr\/local\([^ ]*\).*/\1/p")
-   export "$toolchain"
-  fi
+     local toolchain_path
+     toolchain_path=$(echo "$toolchain_line" | sed -n "s/.*${toolchain}=\/usr\/local\([^ ]*\).*/\1/p")
+     export "$toolchain"="$toolchain_path"
+    fi
 }
 
 extract_toolchain_path "CC"
 extract_toolchain_path "CROSS_COMPILE"
 extract_toolchain_path "CROSS_COMPILE_ARM32"
-extract_toolchain_path "CROSS_COMPILE_COMPACT"
 extract_toolchain_path "CLANG_TRIPLE"
 
 # ==============================================================================
@@ -177,31 +175,42 @@ check_flag() {
     return 1
 }
 
-if check_flag "CONFIG_ARM64=y"; then
- export ARCH=arm64
- export CLANG_TRIPLE="aarch64-linux-gnu-"
- echo "[+] Detected 64-bit Kernel (arm64)"
- if [[ "$VERSION" -eq "4" && "$PATCHLEVEL" -le "14" ]]; then 
-  GCC64=true
- fi
-    
- if check_flag "CONFIG_COMPAT_VDSO=y"; then
-  GCC32=true
-  echo "[+] CONFIG_COMPAT_VDSO enabled. Kernel needs 64-bit & 32-bit GCC."
- fi
+README_ARCH=$(grep -E '^export ARCH=' "$KERNEL_DIR/build_kernel.sh" | cut -d= -f2 | tr -d '"' | tr -d "'" | tr -d ' ' || echo "")
+
+if [ -n "$README_ARCH" ]; then
+ export ARCH="$README_ARCH"
+ if [ "$ARCH" = "arm64" ]; then
+  export CLANG_TRIPLE="aarch64-linux-gnu-"
+   if [[ "$VERSION" -eq "4" && "$PATCHLEVEL" -le "14" ]]; then GCC64=true; fi
+   if check_flag "CONFIG_COMPAT_VDSO=y"; then GCC32=true; fi
+  else
+   export CLANG_TRIPLE="arm-linux-gnueabi-"
+   GCC64=false
+   GCC32=true
+  fi
 else
- export ARCH=arm
- export CLANG_TRIPLE="arm-linux-gnueabi-"
- GCC64=false
- GCC32=true
- echo "[+] Detected 32-bit Kernel (arm). Kernel only needs 32-bit GCC."
+ if check_flag "CONFIG_ARM64=y"; then
+  export ARCH=arm64
+  export CLANG_TRIPLE="aarch64-linux-gnu-"
+  if [[ "$VERSION" -eq "4" && "$PATCHLEVEL" -le "14" ]]; then GCC64=true; fi
+  if check_flag "CONFIG_COMPAT_VDSO=y"; then GCC32=true; fi
+ else
+  export ARCH=arm
+  export CLANG_TRIPLE="arm-linux-gnueabi-"
+  GCC64=false
+  GCC32=true
+ fi
 fi
 
 # ==============================================================================
 # 6. DOWNLOAD TOOLCHAIN
 # ==============================================================================
 # Download clang
-CLANG_DIR="${CC%/bin/clang}"
+if [ -n "${CC:-}" ]; then
+ CLANG_DIR="${CC%/bin/clang}"
+else
+ CLANG_DIR="$TOOLCHAIN_DIR/clang"
+fi
 CLANG_NAME="$(grep -hoE 'clang-r[0-9]+[a-z]*' "$README_FILE" 2>/dev/null | head -n 1 || echo "")"
 if [[ "$VERSION" = "5" && "$PATCHLEVEL" = "4" && -z "$CLANG_NAME" ]]; then
  curl -LO https://github.com/ravindu644/Android-Kernel-Tutorials/releases/download/toolchains/llvm-arm-toolchain-ship-10.0.9.tar.gz
@@ -231,20 +240,19 @@ BUILD_OPTIONS=(
     CLANG_TRIPLE="${CLANG_TRIPLE}"
 )
 
-if [[ "$VERSION" -gt "4" ]] || [[ "$VERSION" -eq "4" && "$PATCHLEVEL" -ge "19" ]]; then
+if [[ "$VERSION" -ge "4" ]] || [[ "$VERSION" -eq "4" && "$PATCHLEVEL" -gt "14" ]]; then
  BUILD_OPTIONS+=( LLVM=1 LLVM_IAS=1 )
 elif [ "$ARCH" = "arm64" ]; then
- export CROSS_COMPILE="${GCC_DIR}/aarch64/bin/aarch64-linux-android-"
+ export CROSS_COMPILE="${CROSS_COMPILE:-{GCC_DIR}/aarch64/bin/aarch64-linux-android-}"
  BUILD_OPTIONS+=( CROSS_COMPILE="${CROSS_COMPILE}" )
 else
- export CROSS_COMPILE="${GCC_DIR}/arm/bin/arm-linux-androideabi-"
+ export CROSS_COMPILE="${CROSS_COMPILE:-{GCC_DIR}/arm/bin/arm-linux-androideabi-}"
  BUILD_OPTIONS+=( CROSS_COMPILE="${CROSS_COMPILE}" )
 fi
 
 if [ "$GCC32" = true ]; then
- export CROSS_COMPILE_ARM32="${GCC_DIR}/arm/bin/arm-linux-androideabi-"
- export CROSS_COMPILE_COMPAT="${GCC_DIR}/arm/bin/arm-linux-androideabi-"
- BUILD_OPTIONS+=( CROSS_COMPILE_ARM32="${CROSS_COMPILE_ARM32}" CROSS_COMPILE_COMPAT="${CROSS_COMPILE_COMPAT}" )
+ export CROSS_COMPILE_ARM32="${CROSS_COMPILE_ARM32:-{GCC_DIR}/arm/bin/arm-linux-androideabi-}"
+ BUILD_OPTIONS+=( CROSS_COMPILE_ARM32="${CROSS_COMPILE_ARM32}" )
 fi
 
 # ==============================================================================
