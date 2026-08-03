@@ -15,7 +15,6 @@ elif [ -z "$README_FILE" ]; then
  fi
 fi
 
-
 VERSION=$(grep -w '^VERSION' Makefile | tr -d ' ' | cut -d= -f2 || echo "")
 PATCHLEVEL=$(grep -w '^PATCHLEVEL' Makefile | tr -d ' ' | cut -d= -f2 || echo "")
 KERNEL_VERSION="${VERSION}.${PATCHLEVEL}"
