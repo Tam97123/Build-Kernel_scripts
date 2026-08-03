@@ -151,23 +151,22 @@ fi
 
 if [ -z "$CUSTOM_DEFCONFIG" ]; then
  while true; do
-  read -p "Enter custom defconfig (supports multiple, space-separated): " user_input
+  read -t 10 -p "Enter custom defconfig (supports multiple, space-separated): " user_input
    if [ -z "$user_input" ]; then
     echo -e "\nYou do not use custom defconfig"
     break
    fi
-   if validate_defconfigs "$user_input"; then
-    CUSTOM_DEFCONFIG="$VALID_DEFCONFIG_NAMES"
-    DEFCONFIG_PATHS="$DEFCONFIG_PATHS $VALID_DEFCONFIG_PATHS"
-    break
-  fi
+   if validate_defconfigs "$user_input"; then break; fi
  done
 else
  if ! validate_defconfigs "$CUSTOM_DEFCONFIG"; then exit 1; fi
+fi
+
+if [ -n "$VALID_DEFCONFIG_NAMES" ]; then
  CUSTOM_DEFCONFIG="$VALID_DEFCONFIG_NAMES"
  DEFCONFIG_PATHS="$DEFCONFIG_PATHS $VALID_DEFCONFIG_PATHS"
+ echo "[+] Using '$CUSTOM_DEFCONFIG' as custom defconfig"
 fi
-echo "[+] Using '$CUSTOM_DEFCONFIG' as custom defconfig"
 
 # ==============================================================================
 # 5. DETECT ARCHITECTURE
@@ -212,7 +211,7 @@ fi
 # ==============================================================================
 # Download clang
 if [ -n "${CC:-}" ]; then
- CLANG_DIR="${CC%/bin/clang}"
+ CLANG_DIR="${KERNEL_DIR}${CC%/bin/clang}"
 else
  CLANG_DIR="$TOOLCHAIN_DIR/clang"
 fi
