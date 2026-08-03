@@ -17,6 +17,7 @@ GCC64=false
 GCC32=false
 # Hardcode this variable if you dont want prompt
 DEFCONFIG=
+KSU=
 
 get_script() {
  local script_name="$1"
@@ -157,6 +158,10 @@ fi
 # ==============================================================================
 # (OPTIONAL) INTEGRATE KERNELSU
 # ==============================================================================
+if [ -z "$KSU" ]; then
+ read -t 10 -p "Integrate KSU? [y/n] (Default [n]): " KSU
+ KSU=${KSU:-n}
+fi
 if [[ "$KSU" == "Y" || "$KSU" == "y" ]]; then
  KSU_DEFCONFIG="$KERNEL_DIR/arch/$ARCH/configs/custom.config"
 
