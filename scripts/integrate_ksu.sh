@@ -6,7 +6,7 @@ set -euo pipefail
 # ==============================================================================
 if [ ! -d "$KERNEL_DIR/KernelSU" ]; then
  echo "[+] Downloading KernelSU..."
- if ! curl -LSs "https://raw.githubusercontent.com/ReSukiSU/ReSukiSU/main/kernel/setup.sh" | bash; then
+ if ! curl -LSs "https://raw.githubusercontent.com/ReSukiSU/ReSukiSU/main/kernel/setup.sh" | bash >/dev/null 2>&1; then
   echo "[-] Error: Cannot download KernelSU" >&2
   exit 1
  fi
@@ -24,7 +24,7 @@ if [ ! -f "$KERNEL_DIR/.done_patch" ]; then
   echo "[-] Error: Cannot download script." >&2
   exit 1
  fi
- chmod +x syscall_hook_patches.sh && bash syscall_hook_patches.sh
+ chmod +x syscall_hook_patches.sh && bash syscall_hook_patches.sh >/dev/null 2>&1
  rm -f syscall_hook_patches.sh
  touch "$KERNEL_DIR/.done_patch"
 fi
