@@ -155,6 +155,43 @@ if [ "$GCC64" = true ] || [ "$GCC32" = true ]; then
 fi
 
 # ==============================================================================
+# (OPTIONAL) INTEGRATE KERNELSU
+# ==============================================================================
+if [[ "$KSU" == "Y" || "$KSU" == "y" ]]; then
+ KSU_DEFCONFIG="$KERNEL_DIR/arch/$ARCH/configs/custom.config"
+
+integrate_ksu () {
+    get_script "integrate_ksu.sh"
+    echo "[+] Downloading defconfig to enable KernelSU"
+    if ! curl -sL "$REPO_URL/defconfig/ksu_defconfig" -o "$KSU_DEFCONFIG"; then
+     echo "Error: Can not download DEFCONFIG." >&2
+     exit 1
+    fi
+    DEFCONFIG="${DEFCONFIG:+$DEFCONFIG }custom.config"
+ }
+
+integrate_ksu_susfs () {
+    get_script "integrate_ksu_susfs.sh"
+    echo "[+] Downloading defconfig to enable KernelSU with SUSFS"
+     if ! curl -sL "$REPO_URL/defconfig/ksu-susfs_defconfig" -o "$KSU_DEFCONFIG"; then
+     echo "[-] Error: Can not download DEFCONFIG." >&2
+    exit 1
+    fi
+    DEFCONFIG="${DEFCONFIG:+$DEFCONFIG }custom.config"
+ }
+
+ if [[ ( "$VERSION" -eq "3" && "$PATCHLEVEL" -eq "18" ) || ( "$VERSION" -eq "4" && "$PATCHLEVEL" -eq "4" ) ]]; then
+  echo "[+] Integrate KernelSU..."
+  integrate_ksu
+ elif [[ "$VERSION" -eq "4" || ( "$VERSION" -eq "5" && "$PATCHLEVEL" -eq "4" ) ]]; then
+  echo "[+] Integrate KernelSU with SUSFS..."
+  integrate_ksu_susfs
+ else
+  echo "[-] This kernel script does not support kernel ${KERNEL_VERSION}"
+ fi
+fi
+
+# ==============================================================================
 # 6. BUILD OPTIONS
 # ==============================================================================
 BUILD_OPTIONS=(
