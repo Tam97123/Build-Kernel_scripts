@@ -151,7 +151,7 @@ fi
 
 if [ -z "$CUSTOM_DEFCONFIG" ]; then
  while true; do
-  read -t 10 -p "Enter custom defconfig (supports multiple, space-separated): " user_input
+  read -t 10 -p "Enter custom defconfig (supports multiple, space-separated): " user_input || true
    if [ -z "$user_input" ]; then
     echo -e "\nYou do not use custom defconfig"
     break
