@@ -8,7 +8,7 @@ if [ -z "$README_FILE" ]; then
  exit 1
 fi
 if [ ! -f "$KERNEL_DIR/build_kernel.sh" ]; then
- echo "Error: Build script is necessary from SAMSUNG (build_kernel.sh not found)."
+ echo "Error: Build script is necessary from SAMSUNG (build_kernel.sh not found)." >&2
  exit 1
 fi
 
@@ -220,7 +220,7 @@ if [[ "$VERSION" = "5" && "$PATCHLEVEL" = "4" && -z "$CLANG_NAME" ]]; then
 elif [ -n "$CLANG_NAME" ]; then
  get_script "get_clang.sh"
 else
- echo "Error: Can not identify clang name."
+ echo "Error: Can not identify clang name." >&2
  exit 1
 fi
 
