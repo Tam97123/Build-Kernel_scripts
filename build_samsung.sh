@@ -5,7 +5,7 @@ KERNEL_DIR=$(pwd)
 README_FILE="$KERNEL_DIR/README_Kernel.txt"
 if [ -f "Kernel.tar.gz" ]; then
  tar -xzf Kernel.tar.gz && rm -f Kernel.tar.gz
- chmod +x -R $KERNEL_DIR
+ chmod +x -R "$KERNEL_DIR"
 elif [ -z "$README_FILE" ]; then
  echo "[-] Error: It is necessary to follow README from SAMSUNG (README_Kernel.txt not found)" >&2
  exit 1
@@ -13,6 +13,7 @@ elif [ -z "$README_FILE" ]; then
   echo "Error: Build script is necessary from SAMSUNG (build_kernel.sh not found)." >&2
   exit 1
  fi
+ chmod +x -R "$KERNEL_DIR"
 fi
 
 VERSION=$(grep -w '^VERSION' Makefile | tr -d ' ' | cut -d= -f2 || echo "")
