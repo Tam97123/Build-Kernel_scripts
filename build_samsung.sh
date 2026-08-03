@@ -2,15 +2,19 @@
 set -euo pipefail
 
 KERNEL_DIR=$(pwd)
-README_FILE=$(find "$(dirname "$KERNEL_DIR")" -name "README_Kernel.txt" -print -quit 2>/dev/null || echo "")
-if [ -z "$README_FILE" ]; then
+README_FILE="$KERNEL_DIR/README_Kernel.txt"
+if [ -f "Kernel.tar.gz" ]; then
+ tar -xzf Kernel.tar.gz && rm -f Kernel.tar.gz
+ chmod +x -R $KERNEL_DIR
+elif [ -z "$README_FILE" ]; then
  echo "[-] Error: It is necessary to follow README from SAMSUNG (README_Kernel.txt not found)" >&2
  exit 1
+ if [ ! -f "build_kernel.sh" ]; then
+  echo "Error: Build script is necessary from SAMSUNG (build_kernel.sh not found)." >&2
+  exit 1
+ fi
 fi
-if [ ! -f "$KERNEL_DIR/build_kernel.sh" ]; then
- echo "Error: Build script is necessary from SAMSUNG (build_kernel.sh not found)." >&2
- exit 1
-fi
+
 
 VERSION=$(grep -w '^VERSION' Makefile | tr -d ' ' | cut -d= -f2 || echo "")
 PATCHLEVEL=$(grep -w '^PATCHLEVEL' Makefile | tr -d ' ' | cut -d= -f2 || echo "")
