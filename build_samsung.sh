@@ -183,6 +183,7 @@ README_ARCH=$(grep -E '^export ARCH=' "$KERNEL_DIR/build_kernel.sh" | cut -d= -f
 
 if [ -n "$README_ARCH" ]; then
  export ARCH="$README_ARCH"
+ 
  if [ "$ARCH" = "arm64" ]; then
   export CLANG_TRIPLE="aarch64-linux-gnu-"
    if [[ "$VERSION" -eq "4" && "$PATCHLEVEL" -le "14" ]]; then GCC64=true; fi
@@ -206,26 +207,36 @@ else
  fi
 fi
 
+echo -n "Kernel's architecture is $ARCH"
+if [[ "$GCC64" = "true" && "$GCC32" = "true" ]]; then echo "and need 32-bit & 64-bit gcc"
+elif [ "$GCC64" = "true" ]; then echo "and only need 64-bit gcc"
+elif [ "$GCC32" = "true" ]; then echo "and only need 32-bit gcc"
+else echo "but doesn't need gcc"; fi
+
 # ==============================================================================
 # 6. DOWNLOAD TOOLCHAIN
 # ==============================================================================
-# Download clang
+# Check clang path
 if [ -n "${CC:-}" ]; then
  CLANG_DIR="${KERNEL_DIR}${CC%/bin/clang}"
 else
  CLANG_DIR="$TOOLCHAIN_DIR/clang"
 fi
-CLANG_NAME="$(grep -hoE 'clang-r[0-9]+[a-z]*' "$README_FILE" 2>/dev/null | head -n 1 || echo "")"
-if [[ "$VERSION" = "5" && "$PATCHLEVEL" = "4" && -z "$CLANG_NAME" ]]; then
- mkdir -p "$CLANG_DIR"
- curl -LO https://github.com/ravindu644/Android-Kernel-Tutorials/releases/download/toolchains/llvm-arm-toolchain-ship-10.0.9.tar.gz
- tar -xzf llvm-arm-toolchain-ship-10.0.9.tar.gz -C "$CLANG_DIR"
- rm -f llvm-arm-toolchain-ship-10.0.9.tar.gz
-elif [ -n "$CLANG_NAME" ]; then
- get_script "get_clang.sh"
-else
- echo "Error: Can not identify clang name." >&2
- exit 1
+
+# Download clang
+if [ -d "$CLANG_DIR" ]; then
+ CLANG_NAME="$(grep -hoE 'clang-r[0-9]+[a-z]*' "$README_FILE" 2>/dev/null | head -n 1 || echo "")"
+ if [[ "$VERSION" = "5" && "$PATCHLEVEL" = "4" && -z "$CLANG_NAME" ]]; then
+  mkdir -p "$CLANG_DIR"
+  curl -LO https://github.com/ravindu644/Android-Kernel-Tutorials/releases/download/toolchains/llvm-arm-toolchain-ship-10.0.9.tar.gz
+  tar -xzf llvm-arm-toolchain-ship-10.0.9.tar.gz -C "$CLANG_DIR"
+  rm -f llvm-arm-toolchain-ship-10.0.9.tar.gz
+ elif [ -n "$CLANG_NAME" ]; then
+  get_script "get_clang.sh"
+ else
+  echo "Error: Can not identify clang name." >&2
+  exit 1
+ fi
 fi
 
 # Download GCC if toolchain is required
@@ -236,13 +247,6 @@ fi
 # ==============================================================================
 # (OPTIONAL) INTEGRATE KERNELSU
 # ==============================================================================
-if [ -z "$KSU" ]; then
- read -t 10 -p "Integrate KSU? [y/n] (Default [n]): " KSU
- KSU=${KSU:-n}
-fi
-if [[ "$KSU" == "Y" || "$KSU" == "y" ]]; then
- KSU_DEFCONFIG="$KERNEL_DIR/arch/$ARCH/configs/custom.config"
-
 integrate_ksu () {
     get_script "integrate_ksu.sh"
     echo "[+] Downloading defconfig to enable KernelSU"
@@ -263,6 +267,19 @@ integrate_ksu_susfs () {
     DEFCONFIG="${DEFCONFIG:+$DEFCONFIG }custom.config"
  }
 
+if [ -z "$KSU" ]; then
+ while true; do
+  read -t 10 -p "Integrate KSU? [y/n] (Default [n]): " KSU || true
+  if [[ "$KSU" = "Y" || "$KSU" = "y" || "$KSU" = "N" || "$KSU" = "n" || -z "$KSU" ]]; then
+   break
+  else
+   echo "Unknown command: '$KSU'"
+  fi
+ done
+fi
+
+if [[ "$KSU" = "Y" || "$KSU" = "y" ]]; then
+ KSU_DEFCONFIG="$KERNEL_DIR/arch/$ARCH/configs/custom.config"
  if [[ ( "$VERSION" -eq "3" && "$PATCHLEVEL" -eq "18" ) || ( "$VERSION" -eq "4" && "$PATCHLEVEL" -eq "4" ) ]]; then
   echo "[+] Integrate KernelSU..."
   integrate_ksu
@@ -270,8 +287,14 @@ integrate_ksu_susfs () {
   echo "[+] Integrate KernelSU with SUSFS..."
   integrate_ksu_susfs
  else
-  echo "[-] This kernel script does not support kernel ${KERNEL_VERSION}"
+  echo "[-] This kernel script does not support kernel ${KERNEL_VERSION}" >&2
+  exit 1
  fi
+elif [[ "$KSU" = "N" || "$KSU" = "n" || -z "$KSU" ]]; then
+  echo "[-] Skipping integrate KernelSU into kernel"
+else
+  echo "[-] Error: Unknown command '$KSU'" >&2
+  exit 1
 fi
 
 # ==============================================================================
