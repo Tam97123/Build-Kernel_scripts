@@ -3,13 +3,15 @@ set -euo pipefail
 
 KERNEL_DIR=$(pwd)
 README_FILE="$KERNEL_DIR/README_Kernel.txt"
+BUILD_SCRIPT="$KERNEL_DIR/build_kernel.sh"
 if [ -f "Kernel.tar.gz" ]; then
  tar -xzf Kernel.tar.gz && mv Kernel.tar.gz Kernel-backup.tar.gz
  chmod +x -R "$KERNEL_DIR"
-elif [ -z "$README_FILE" ]; then
- echo "[-] Error: It is necessary to follow README from SAMSUNG (README_Kernel.txt not found)" >&2
- exit 1
- if [ ! -f "build_kernel.sh" ]; then
+else
+ if [ ! -f "$README_FILE" ]; then
+  echo "[-] Error: It is necessary to follow README from SAMSUNG (README_Kernel.txt not found)" >&2
+  exit 1
+ elif [ ! -f "$BUILD_SCRIPT" ]; then
   echo "Error: Build script is necessary from SAMSUNG (build_kernel.sh not found)." >&2
   exit 1
  fi
@@ -27,8 +29,8 @@ DEFCONFIG_DIR=(
     "$KERNEL_DIR/arch/arm64/configs"
     "$KERNEL_DIR/arch/arm/configs"
 )
-GCC64=false
 GCC32=false
+GCC64=false
 # Hardcode this variable if you dont want prompt
 CUSTOM_DEFCONFIG=
 KSU=
@@ -91,25 +93,45 @@ fi
 # 3. README FROM SAMSUNG
 # ==============================================================================
 extract_toolchain_path() {
-    local toolchain="$1"
+    local toolchain="${1:-}"
+    local search_file="${README_FILE:-}"
 
-    if grep -q "$toolchain" "$README_FILE"; then
-     local toolchain_line
-     toolchain_line=$(grep -m 1 "${toolchain}=/usr/local" "$README_FILE" || true)    
-     if [ -z "$toolchain_line" ]; then
-      return 0
-     fi
+    if [ -z "$toolchain" ] || [ -z "$search_file" ] || [ ! -f "$search_file" ]; then
+     return 0
+    fi
 
-     local toolchain_path
-     toolchain_path=$(echo "$toolchain_line" | sed -n "s/.*${toolchain}=\/usr\/local\([^ ]*\).*/\1/p")
+    local toolchain_path
+    toolchain_path=$(sed -n "s/.*${toolchain}=\/usr\/local\([^ ]*\).*/\1/p" "$search_file" | head -n 1)
+
+    if [ -n "$toolchain_path" ]; then
      export "$toolchain"="$toolchain_path"
     fi
 }
 
-extract_toolchain_path "CC"
-extract_toolchain_path "CROSS_COMPILE"
-extract_toolchain_path "CROSS_COMPILE_ARM32"
-extract_toolchain_path "CLANG_TRIPLE"
+for target in "CC" "CROSS_COMPILE" "CROSS_COMPILE_ARM32" "CLANG_TRIPLE"; do
+ extract_toolchain_path "$target"
+done
+
+ARCH=$(sed -n 's/^export ARCH=//p' "$BUILD_SCRIPT" | tr -d "\"' " | head -n 1)
+
+if echo "${CROSS_COMPILE:-}" | grep -q "aarch64"; then
+ GCC64=true
+fi
+if [ -n "${CROSS_COMPILE_ARM32:-}" ]; then
+ GCC32=true
+elif echo "${CROSS_COMPILE:-}" | grep -q "arm"; then
+ GCC32=true
+fi
+
+if [[ "$GCC64" = true && "$GCC32" = true ]]; then
+ echo "[+] Kernel needs both 32-bits & 64-bit GCC"
+elif [[ "$GCC32" = true ]]; then
+ echo "[+] Kernel only needs 32-bit GCC"
+elif [[ "$GCC64" = true ]]; then
+ echo "[+] Kernel only needs 64-bit GCC"
+else
+ echo "[+] Kernel doesn't need GCC"
+fi
 
 # ==============================================================================
 # 4. CHECK DEFCONFIG
@@ -169,52 +191,7 @@ if [ -n "$VALID_DEFCONFIG_NAMES" ]; then
 fi
 
 # ==============================================================================
-# 5. DETECT ARCHITECTURE
-# ==============================================================================
-check_flag() {
-    local flag="$1"
-    for path in $DEFCONFIG_PATHS; do
-     if grep -q "$flag" "$path" 2>/dev/null; then return 0; fi
-    done
-    return 1
-}
-
-README_ARCH=$(grep -E '^export ARCH=' "$KERNEL_DIR/build_kernel.sh" | cut -d= -f2 | tr -d '"' | tr -d "'" | tr -d ' ' || echo "")
-
-if [ -n "$README_ARCH" ]; then
- export ARCH="$README_ARCH"
- 
- if [ "$ARCH" = "arm64" ]; then
-  export CLANG_TRIPLE="aarch64-linux-gnu-"
-   if [[ "$VERSION" -eq "4" && "$PATCHLEVEL" -le "14" ]]; then GCC64=true; fi
-   if check_flag "CONFIG_COMPAT_VDSO=y"; then GCC32=true; fi
-  else
-   export CLANG_TRIPLE="arm-linux-gnueabi-"
-   GCC64=false
-   GCC32=true
-  fi
-else
- if check_flag "CONFIG_ARM64=y"; then
-  export ARCH=arm64
-  export CLANG_TRIPLE="aarch64-linux-gnu-"
-  if [[ "$VERSION" -eq "4" && "$PATCHLEVEL" -le "14" ]]; then GCC64=true; fi
-  if check_flag "CONFIG_COMPAT_VDSO=y"; then GCC32=true; fi
- else
-  export ARCH=arm
-  export CLANG_TRIPLE="arm-linux-gnueabi-"
-  GCC64=false
-  GCC32=true
- fi
-fi
-
-echo -n "Kernel's architecture is $ARCH"
-if [[ "$GCC64" = "true" && "$GCC32" = "true" ]]; then echo "and need 32-bit & 64-bit gcc"
-elif [ "$GCC64" = "true" ]; then echo "and only need 64-bit gcc"
-elif [ "$GCC32" = "true" ]; then echo "and only need 32-bit gcc"
-else echo "but doesn't need gcc"; fi
-
-# ==============================================================================
-# 6. DOWNLOAD TOOLCHAIN
+# 5. DOWNLOAD TOOLCHAIN
 # ==============================================================================
 # Check clang path
 if [ -n "${CC:-}" ]; then
@@ -298,7 +275,7 @@ else
 fi
 
 # ==============================================================================
-# 7. BUILD OPTIONS
+# 6. BUILD OPTIONS
 # ==============================================================================
 BUILD_OPTIONS=(
     -C "${KERNEL_DIR}"
@@ -309,23 +286,18 @@ BUILD_OPTIONS=(
     CLANG_TRIPLE="${CLANG_TRIPLE}"
 )
 
-if [[ "$VERSION" -gt "4" ]] || [[ "$VERSION" -eq "4" && "$PATCHLEVEL" -gt "14" ]]; then
+if [[ ( "$VERSION" -gt "4" || ( "$VERSION" -eq "4" && "$PATCHLEVEL" -gt "14" ) ) && -z "${CROSS_COMPILE:-}" ]]; then
  BUILD_OPTIONS+=( LLVM=1 LLVM_IAS=1 )
-elif [ "$ARCH" = "arm64" ]; then
- export CROSS_COMPILE="${CROSS_COMPILE:-${GCC_DIR}/aarch64/bin/aarch64-linux-android-}"
- BUILD_OPTIONS+=( CROSS_COMPILE="${CROSS_COMPILE}" )
-else
- export CROSS_COMPILE="${CROSS_COMPILE:-${GCC_DIR}/arm/bin/arm-linux-androideabi-}"
+fi
+if [ -n "${CROSS_COMPILE:-}" ]; then
  BUILD_OPTIONS+=( CROSS_COMPILE="${CROSS_COMPILE}" )
 fi
-
-if [ "$GCC32" = true ]; then
- export CROSS_COMPILE_ARM32="${CROSS_COMPILE_ARM32:-${GCC_DIR}/arm/bin/arm-linux-androideabi-}"
+if [ -n "${CROSS_COMPILE_ARM32:-}" ]; then
  BUILD_OPTIONS+=( CROSS_COMPILE_ARM32="${CROSS_COMPILE_ARM32}" )
 fi
 
 # ==============================================================================
-# 8. BUILDING PROCESS
+# 7. BUILDING PROCESS
 # ==============================================================================
 export KBUILD_BUILD_USER="@Tam97123"
 export PATH="${CLANG_DIR}/bin:${PATH}"
