@@ -4,7 +4,7 @@ set -euo pipefail
 KERNEL_DIR=$(pwd)
 README_FILE="$KERNEL_DIR/README_Kernel.txt"
 if [ -f "Kernel.tar.gz" ]; then
- tar -xzf Kernel.tar.gz && rm -f Kernel.tar.gz
+ tar -xzf Kernel.tar.gz && mv Kernel.tar.gz Kernel-backup.tar.gz
  chmod +x -R "$KERNEL_DIR"
 elif [ -z "$README_FILE" ]; then
  echo "[-] Error: It is necessary to follow README from SAMSUNG (README_Kernel.txt not found)" >&2
