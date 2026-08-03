@@ -17,6 +17,7 @@ GCC64=false
 GCC32=false
 # Hardcode this variable if you dont want prompt
 DEFCONFIG=
+KSU=
 
 get_script() {
  local script_name="$1"
@@ -152,6 +153,47 @@ if [ ! -d "$CLANG_DIR" ]; then get_script "get_clang.sh"; fi
 # Download GCC if toolchain is required
 if [ "$GCC64" = true ] || [ "$GCC32" = true ]; then
  if [ ! -d "$GCC_DIR" ]; then get_script "get_gcc.sh"; fi
+fi
+
+# ==============================================================================
+# (OPTIONAL) INTEGRATE KERNELSU
+# ==============================================================================
+if [ -z "$KSU" ]; then
+ read -t 10 -p "Integrate KSU? [y/n] (Default [n]): " KSU
+ KSU=${KSU:-n}
+fi
+if [[ "$KSU" == "Y" || "$KSU" == "y" ]]; then
+ KSU_DEFCONFIG="$KERNEL_DIR/arch/$ARCH/configs/custom.config"
+
+integrate_ksu () {
+    get_script "integrate_ksu.sh"
+    echo "[+] Downloading defconfig to enable KernelSU"
+    if ! curl -sL "$REPO_URL/defconfig/ksu_defconfig" -o "$KSU_DEFCONFIG"; then
+     echo "Error: Can not download DEFCONFIG." >&2
+     exit 1
+    fi
+    DEFCONFIG="${DEFCONFIG:+$DEFCONFIG }custom.config"
+ }
+
+integrate_ksu_susfs () {
+    get_script "integrate_ksu_susfs.sh"
+    echo "[+] Downloading defconfig to enable KernelSU with SUSFS"
+     if ! curl -sL "$REPO_URL/defconfig/ksu-susfs_defconfig" -o "$KSU_DEFCONFIG"; then
+     echo "[-] Error: Can not download DEFCONFIG." >&2
+    exit 1
+    fi
+    DEFCONFIG="${DEFCONFIG:+$DEFCONFIG }custom.config"
+ }
+
+ if [[ ( "$VERSION" -eq "3" && "$PATCHLEVEL" -eq "18" ) || ( "$VERSION" -eq "4" && "$PATCHLEVEL" -eq "4" ) ]]; then
+  echo "[+] Integrate KernelSU..."
+  integrate_ksu
+ elif [[ "$VERSION" -eq "4" || ( "$VERSION" -eq "5" && "$PATCHLEVEL" -eq "4" ) ]]; then
+  echo "[+] Integrate KernelSU with SUSFS..."
+  integrate_ksu_susfs
+ else
+  echo "[-] This kernel script does not support kernel ${KERNEL_VERSION}"
+ fi
 fi
 
 # ==============================================================================
