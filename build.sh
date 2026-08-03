@@ -158,13 +158,6 @@ fi
 # ==============================================================================
 # (OPTIONAL) INTEGRATE KERNELSU
 # ==============================================================================
-if [ -z "$KSU" ]; then
- read -t 10 -p "Integrate KSU? [y/n] (Default [n]): " KSU
- KSU=${KSU:-n}
-fi
-if [[ "$KSU" == "Y" || "$KSU" == "y" ]]; then
- KSU_DEFCONFIG="$KERNEL_DIR/arch/$ARCH/configs/custom.config"
-
 integrate_ksu () {
     get_script "integrate_ksu.sh"
     echo "[+] Downloading defconfig to enable KernelSU"
@@ -185,6 +178,19 @@ integrate_ksu_susfs () {
     DEFCONFIG="${DEFCONFIG:+$DEFCONFIG }custom.config"
  }
 
+if [ -z "$KSU" ]; then
+ while true; do
+  read -t 10 -p "Integrate KSU? [y/n] (Default [n]): " KSU || true
+  if [[ "$KSU" = "Y" || "$KSU" = "y" || "$KSU" = "N" || "$KSU" = "n" || -z "$KSU" ]]; then
+   break
+  else
+   echo "Unknown command: '$KSU'"
+  fi
+ done
+fi
+
+if [[ "$KSU" = "Y" || "$KSU" = "y" ]]; then
+ KSU_DEFCONFIG="$KERNEL_DIR/arch/$ARCH/configs/custom.config"
  if [[ ( "$VERSION" -eq "3" && "$PATCHLEVEL" -eq "18" ) || ( "$VERSION" -eq "4" && "$PATCHLEVEL" -eq "4" ) ]]; then
   echo "[+] Integrate KernelSU..."
   integrate_ksu
@@ -192,8 +198,14 @@ integrate_ksu_susfs () {
   echo "[+] Integrate KernelSU with SUSFS..."
   integrate_ksu_susfs
  else
-  echo "[-] This kernel script does not support kernel ${KERNEL_VERSION}"
+  echo "[-] This kernel script does not support kernel ${KERNEL_VERSION}" >&2
+  exit 1
  fi
+elif [[ "$KSU" = "N" || "$KSU" = "n" || -z "$KSU" ]]; then
+  echo "[-] Skipping integrate KernelSU into kernel"
+else
+  echo "[-] Error: Unknown command '$KSU'" >&2
+  exit 1
 fi
 
 # ==============================================================================
