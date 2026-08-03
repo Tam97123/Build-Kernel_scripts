@@ -8,7 +8,7 @@ REJECT_DIR="$KERNEL_DIR/patch_rejects"
 # ==============================================================================
 if [ ! -d "$KERNEL_DIR/KernelSU" ]; then
  echo "[+] Downloading KernelSU..."
- if ! curl -LSs "https://raw.githubusercontent.com/ReSukiSU/ReSukiSU/main/kernel/setup.sh" | bash; then
+ if ! curl -LSs "https://raw.githubusercontent.com/ReSukiSU/ReSukiSU/main/kernel/setup.sh" | bash >/dev/null 2>&1; then
   echo "[-] Error: Cannot download KernelSU" >&2
   exit 1
  fi
@@ -26,24 +26,20 @@ if [ ! -f "$KERNEL_DIR/.done_patch" ]; then
   echo "[-] Error: Cannot download script." >&2
   exit 1
  fi
- chmod +x susfs_inline_hook_patches.sh && bash susfs_inline_hook_patches.sh
+ chmod +x susfs_inline_hook_patches.sh && bash susfs_inline_hook_patches.sh >/dev/null 2>&1
  rm -f susfs_inline_hook_patches.sh
- touch "$KERNEL_DIR/.done_patch"
-fi
+ if [ ! -f "$KERNEL_DIR/$PATCH_FILE" ]; then
+  PATCH_URL="https://raw.githubusercontent.com/JackA1ltman/NonGKI_Kernel_Build_2nd/refs/heads/mainline/Patches/Patch/susfs_patch_to_${KERNEL_VERSION}.patch"
+  echo "[+] Downloading SUSFS patch for kernel ${KERNEL_VERSION}..."
+  if ! curl -sLO "$PATCH_URL"; then
+   echo "[-] Error: Cannot download patch file" >&2
+   exit 1
+  fi
 
-PATCH_FILE="susfs_patch_to_${KERNEL_VERSION}.patch"
-
-if [ ! -f "$KERNEL_DIR/$PATCH_FILE" ]; then
- echo "[+] Downloading SUSFS patch for kernel ${KERNEL_VERSION}..."
-
- PATCH_URL="https://raw.githubusercontent.com/JackA1ltman/NonGKI_Kernel_Build_2nd/refs/heads/mainline/Patches/Patch/$PATCH_FILE"
- if ! curl -sLO "$PATCH_URL"; then
-  echo "[-] Error: Cannot download patch file: $PATCH_FILE" >&2
-  exit 1
+  echo "[+] Applying SUSFS patch..."
+  patch -p1 < "susfs_patch_to_${KERNEL_VERSION}.patch" || true
+  touch "$KERNEL_DIR/.done_patch"
  fi
-
- echo "[+] Applying SUSFS patch..."
- patch -p1 < "$PATCH_FILE" || true
 fi
 
 # ==============================================================================
@@ -77,26 +73,21 @@ delete_rejects() {
 if [ "$REJ_COUNT" -gt 0 ]; then
  echo "[-] Warning: Found $REJ_COUNT failed patch rejections (.rej)!"
  while true; do
-  if read -t 10 -p "Continue them?: " COLLECT_REJECTS; then
-   if [ -z "$COLLECT_REJECTS" ]; then
-    echo -e "\n[+] No respone. Collecting rejects into $REJECT_DIR and continue"
-    move_rejects
-    break
-   elif [[ "$COLLECT_REJECTS" =~ ^[Yy]$ ]]; then
-    echo "[+] Deleting reject files and continue"
-    delete_rejects
-    break
-   elif [[ "$COLLECT_REJECTS" =~ ^[Nn]$ ]]; then
-    echo "[-] Collecting rejects into $REJECT_DIR and abort" >&2
-    move_rejects
-    exit 1
-   else
-    echo "[-] Unknown answer: '$COLLECT_REJECTS'"
-   fi
-  else
+  read -t 10 -p "Continue them?: " COLLECT_REJECTS || true
+  if [ -z "$COLLECT_REJECTS" ]; then
    echo -e "\n[+] No respone. Collecting rejects into $REJECT_DIR and continue"
    move_rejects
    break
+  elif [[ "$COLLECT_REJECTS" == "Y" || "$COLLECT_REJECTS" == "y" ]]; then
+   echo "[+] Deleting reject files and continue"
+   delete_rejects
+   break
+  elif [[ "$COLLECT_REJECTS" == "N" || "$COLLECT_REJECTS" == "n" ]]; then
+   echo "[-] Collecting rejects into $REJECT_DIR and abort" >&2
+   move_rejects
+   exit 1
+  else
+   echo "[?] Unknown answer: '$COLLECT_REJECTS'"
   fi
  done
 fi
