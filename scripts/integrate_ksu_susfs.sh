@@ -28,7 +28,7 @@ if [ ! -f "$KERNEL_DIR/.done_patch" ]; then
  fi
  chmod +x susfs_inline_hook_patches.sh && bash susfs_inline_hook_patches.sh >/dev/null 2>&1
  rm -f susfs_inline_hook_patches.sh
- if [ ! -f "$KERNEL_DIR/$PATCH_FILE" ]; then
+ if [ ! -f "$KERNEL_DIR/susfs_patch_to_${KERNEL_VERSION}" ]; then
   PATCH_URL="https://raw.githubusercontent.com/JackA1ltman/NonGKI_Kernel_Build_2nd/refs/heads/mainline/Patches/Patch/susfs_patch_to_${KERNEL_VERSION}.patch"
   echo "[+] Downloading SUSFS patch for kernel ${KERNEL_VERSION}..."
   if ! curl -sLO "$PATCH_URL"; then
