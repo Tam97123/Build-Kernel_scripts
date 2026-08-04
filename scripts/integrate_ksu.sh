@@ -24,6 +24,7 @@ if [ ! -f "$KERNEL_DIR/.ksu_patch" ]; then
   echo "[-] Error: Cannot download script." >&2
   exit 1
  fi
- chmod +x syscall_hook_patches.sh && bash syscall_hook_patches.sh >/dev/null 2>&1
+ chmod +x syscall_hook_patches.sh
+ bash syscall_hook_patches.sh >/dev/null 2>&1
  rm -f syscall_hook_patches.sh
 fi
