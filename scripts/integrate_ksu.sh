@@ -18,7 +18,7 @@ fi
 # ==============================================================================
 # 2. PATCH KERNELSU
 # ==============================================================================
-if [ ! -f "$KERNEL_DIR/.done_patch" ]; then
+if [ ! -f "$KERNEL_DIR/.ksu_patch" ]; then
  echo "[+] Downloading SUSFS inline hook script..."
  if ! curl -sLO https://raw.githubusercontent.com/JackA1ltman/NonGKI_Kernel_Build_2nd/refs/heads/mainline/Patches/syscall_hook_patches.sh; then
   echo "[-] Error: Cannot download script." >&2
@@ -26,5 +26,4 @@ if [ ! -f "$KERNEL_DIR/.done_patch" ]; then
  fi
  chmod +x syscall_hook_patches.sh && bash syscall_hook_patches.sh >/dev/null 2>&1
  rm -f syscall_hook_patches.sh
- touch "$KERNEL_DIR/.done_patch"
 fi
