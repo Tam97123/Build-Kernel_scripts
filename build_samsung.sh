@@ -201,7 +201,7 @@ else
 fi
 
 # Download clang
-if [ -d "$CLANG_DIR" ]; then
+if [ ! -d "$CLANG_DIR" ]; then
  CLANG_NAME="$(grep -hoE 'clang-r[0-9]+[a-z]*' "$README_FILE" 2>/dev/null | head -n 1 || echo "")"
  if [[ "$VERSION" = "5" && "$PATCHLEVEL" = "4" && -z "$CLANG_NAME" ]]; then
   mkdir -p "$CLANG_DIR"
@@ -227,51 +227,56 @@ fi
 integrate_ksu () {
     get_script "integrate_ksu.sh"
     echo "[+] Downloading defconfig to enable KernelSU"
-    if ! curl -sL "$REPO_URL/defconfig/ksu_defconfig" -o "$KSU_DEFCONFIG"; then
-     echo "Error: Can not download DEFCONFIG." >&2
-     exit 1
+    if [ ! -f "$KSU_DEFCONFIG" ]; then
+     if ! curl -sL "$REPO_URL/defconfig/ksu_defconfig" -o "$KSU_DEFCONFIG"; then
+      echo "Error: Can not download DEFCONFIG." >&2
+      exit 1
+     fi
     fi
     DEFCONFIG="${DEFCONFIG:+$DEFCONFIG }custom.config"
  }
 
 integrate_ksu_susfs () {
     get_script "integrate_ksu_susfs.sh"
-    echo "[+] Downloading defconfig to enable KernelSU with SUSFS"
+    if [ ! -f "$KSU_DEFCONFIG" ]; then
+     echo "[+] Downloading defconfig to enable KernelSU with SUSFS"
      if ! curl -sL "$REPO_URL/defconfig/ksu-susfs_defconfig" -o "$KSU_DEFCONFIG"; then
-     echo "[-] Error: Can not download DEFCONFIG." >&2
-    exit 1
+      echo "[-] Error: Can not download DEFCONFIG." >&2
+      exit 1
+     fi
     fi
     DEFCONFIG="${DEFCONFIG:+$DEFCONFIG }custom.config"
  }
-
-if [ -z "$KSU" ]; then
- while true; do
-  read -t 10 -p "Integrate KSU? [y/n] (Default [n]): " KSU || true
-  if [[ "$KSU" = "Y" || "$KSU" = "y" || "$KSU" = "N" || "$KSU" = "n" || -z "$KSU" ]]; then
-   break
-  else
-   echo "Unknown command: '$KSU'"
-  fi
- done
-fi
-
-if [[ "$KSU" = "Y" || "$KSU" = "y" ]]; then
- KSU_DEFCONFIG="$KERNEL_DIR/arch/$ARCH/configs/custom.config"
- if [[ ( "$VERSION" -eq "3" && "$PATCHLEVEL" -eq "18" ) || ( "$VERSION" -eq "4" && "$PATCHLEVEL" -eq "4" ) ]]; then
-  echo "[+] Integrate KernelSU..."
-  integrate_ksu
- elif [[ "$VERSION" -eq "4" || ( "$VERSION" -eq "5" && "$PATCHLEVEL" -eq "4" ) ]]; then
-  echo "[+] Integrate KernelSU with SUSFS..."
-  integrate_ksu_susfs
- else
-  echo "[-] This kernel script does not support kernel ${KERNEL_VERSION}" >&2
-  exit 1
+if [ ! -f "$KERNEL_DIR/.ksu_patch" ]; then
+ if [ -z "$KSU" ]; then
+  while true; do
+   read -t 10 -p "Integrate KSU? [y/n] (Default [n]): " KSU || true
+   if [[ "$KSU" = "Y" || "$KSU" = "y" || "$KSU" = "N" || "$KSU" = "n" || -z "$KSU" ]]; then
+    break
+   else
+    echo "Unknown command: '$KSU'"
+   fi
+  done
  fi
-elif [[ "$KSU" = "N" || "$KSU" = "n" || -z "$KSU" ]]; then
-  echo "[-] Skipping integrate KernelSU into kernel"
-else
-  echo "[-] Error: Unknown command '$KSU'" >&2
-  exit 1
+ if [[ "$KSU" = "Y" || "$KSU" = "y" ]]; then
+  KSU_DEFCONFIG="$KERNEL_DIR/arch/$ARCH/configs/custom.config"
+  if [[ "$KERNEL_VERSION" = "3.18" || "$KERNEL_VERSION" = "4.4" ]]; then
+   echo "[+] Integrate KernelSU..."
+   integrate_ksu
+  elif [[ "$VERSION" -eq "4" || ( "$VERSION" -eq "5" && "$PATCHLEVEL" -eq "4" ) ]]; then
+   echo "[+] Integrate KernelSU with SUSFS..."
+   integrate_ksu_susfs
+  else
+   echo "[-] This kernel script does not support kernel ${KERNEL_VERSION}" >&2
+   exit 1
+  fi
+ touch "$KERNEL_DIR/.ksu_patch"
+ elif [[ "$KSU" = "N" || "$KSU" = "n" || -z "$KSU" ]]; then
+   echo "[-] Skipping integrate KernelSU into kernel"
+ else
+   echo "[-] Error: Unknown command '$KSU'" >&2
+   exit 1
+ fi
 fi
 
 # ==============================================================================
