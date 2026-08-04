@@ -45,7 +45,7 @@ fi
 # ==============================================================================
 # 3. PATCH CONFLICT HANDLER FUNCTIONS
 # ==============================================================================
-mapfile -d $'\0' REJ_FILES < <(find . -type f -name "*.rej" -print0)
+mapfile -d $'\0' REJ_FILES < <(find "$KERNEL_DIR" -path "$REJECT_DIR" -prune -o -type f -name "*.rej" -print0)
 REJ_COUNT=${#REJ_FILES[@]}
 
 if [ "$REJ_COUNT" -eq 1 ] && [ -z "${REJ_FILES[0]}" ]; then
