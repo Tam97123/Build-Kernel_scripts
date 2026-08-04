@@ -20,13 +20,14 @@ fi
 # ==============================================================================
 # 2. PATCH KERNELSU & SUSFS
 # ==============================================================================
-if [ ! -f "$KERNEL_DIR/.done_patch" ]; then
+if [ ! -f "$KERNEL_DIR/.ksu_patch" ]; then
  echo "[+] Downloading SUSFS inline hook script..."
  if ! curl -sLO https://raw.githubusercontent.com/JackA1ltman/NonGKI_Kernel_Build_2nd/refs/heads/mainline/Patches/susfs_inline_hook_patches.sh; then
   echo "[-] Error: Cannot download script." >&2
   exit 1
  fi
- chmod +x susfs_inline_hook_patches.sh && bash susfs_inline_hook_patches.sh >/dev/null 2>&1
+ chmod +x susfs_inline_hook_patches.sh
+ bash susfs_inline_hook_patches.sh >/dev/null 2>&1
  rm -f susfs_inline_hook_patches.sh
  if [ ! -f "$KERNEL_DIR/susfs_patch_to_${KERNEL_VERSION}" ]; then
   PATCH_URL="https://raw.githubusercontent.com/JackA1ltman/NonGKI_Kernel_Build_2nd/refs/heads/mainline/Patches/Patch/susfs_patch_to_${KERNEL_VERSION}.patch"
@@ -35,10 +36,9 @@ if [ ! -f "$KERNEL_DIR/.done_patch" ]; then
    echo "[-] Error: Cannot download patch file" >&2
    exit 1
   fi
-
   echo "[+] Applying SUSFS patch..."
   patch -p1 < "susfs_patch_to_${KERNEL_VERSION}.patch" || true
-  touch "$KERNEL_DIR/.done_patch"
+  rm -f susfs_patch_to_${KERNEL_VERSION}.patch
  fi
 fi
 
