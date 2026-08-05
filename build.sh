@@ -10,8 +10,8 @@ TOOLCHAIN_DIR="$KERNEL_DIR/toolchain"
 CLANG_DIR="$TOOLCHAIN_DIR/clang"
 GCC_DIR="$TOOLCHAIN_DIR/gcc"
 DEFCONFIG_DIR=(
-    "$KERNEL_DIR/arch/arm64/configs"
-    "$KERNEL_DIR/arch/arm/configs"
+ "$KERNEL_DIR/arch/arm64/configs"
+ "$KERNEL_DIR/arch/arm/configs"
 )
 GCC64=false
 GCC32=false
@@ -34,28 +34,35 @@ get_script() {
 # 1. DEPENDENCIES & OS CHECK
 # ==============================================================================
 install_dependencies () {
-    echo "================================================="
-    echo "[+] Detecting OS and installing dependencies..."
-    if command -v apt &> /dev/null; then
-     echo "[+] Ubuntu/Debian-based system detected, using apt..."
-     sudo apt update && sudo apt install -y git device-tree-compiler lz4 xz-utils zlib1g-dev openjdk-17-jdk gcc g++ python3 python-is-python3 p7zip-full android-sdk-libsparse-utils erofs-utils \
-      default-jdk gnupg flex bison gperf build-essential zip curl ccache libc6-dev libncurses-dev libx11-dev libreadline-dev libgl1 libgl1-mesa-dev \
-      make sudo bc grep tofrodos python3-markdown libxml2-utils xsltproc libtinfo6 \
-      repo cpio kmod openssl libelf-dev pahole libssl-dev libarchive-tools zstd libyaml-dev --fix-missing  
-     wget -q http://mirrors.kernel.org/ubuntu/pool/universe/n/ncurses/libtinfo5_6.3-2ubuntu0.2_amd64.deb && sudo dpkg -i libtinfo5_6.3-2ubuntu0.2_amd64.deb && rm -f libtinfo5_6.3-2ubuntu0.2_amd64.deb
-    elif command -v dnf &> /dev/null; then
-     echo "[+] Fedora/RHEL-based system detected, using dnf..."
-     sudo dnf group install -y "c-development" "development-tools"
-     sudo dnf install -y dtc lz4 xz zlib-devel java-latest-openjdk-devel python3 \
-      p7zip p7zip-plugins android-tools erofs-utils \
-      ncurses-devel ccache libX11-devel readline-devel mesa-libGL-devel python3-markdown \
-      libxml2 libxslt dos2unix kmod openssl elfutils-libelf-devel dwarves \
-      openssl-devel libarchive zstd rsync libyaml-devel openssl-devel-engine --skip-unavailable
-    else
-     echo "[-] Error: Can not determine package manager, please install dependencies manually." >&2
-     exit 1
-    fi
-    touch .requirements
+ echo "[+] Detecting OS and installing dependencies..."
+ if command -v apt &> /dev/null; then
+  echo "[+] Ubuntu/Debian-based system detected, using apt..."
+   sudo apt update && sudo apt install -y git device-tree-compiler lz4 xz-utils zlib1g-dev openjdk-17-jdk gcc g++ python3 python-is-python3 p7zip-full android-sdk-libsparse-utils erofs-utils \
+   default-jdk gnupg flex bison gperf build-essential zip curl ccache libc6-dev libncurses-dev libx11-dev libreadline-dev libgl1 libgl1-mesa-dev \
+   make sudo bc grep tofrodos python3-markdown libxml2-utils xsltproc libtinfo6 \
+   repo cpio kmod openssl libelf-dev pahole libssl-dev libarchive-tools zstd libyaml-dev --fix-missing
+  wget -q http://mirrors.kernel.org/ubuntu/pool/universe/n/ncurses/libtinfo5_6.3-2ubuntu0.2_amd64.deb && sudo dpkg -i libtinfo5_6.3-2ubuntu0.2_amd64.deb && rm -f libtinfo5_6.3-2ubuntu0.2_amd64.deb
+ elif command -v dnf &> /dev/null; then
+  echo "[+] Fedora/RHEL-based system detected, using dnf..."
+  sudo dnf group install -y "c-development" "development-tools"
+  sudo dnf install -y dtc lz4 xz zlib-devel java-latest-openjdk-devel python3 \
+   p7zip p7zip-plugins android-tools erofs-utils \
+   ncurses-devel ccache libX11-devel readline-devel mesa-libGL-devel python3-markdown \
+   libxml2 libxslt dos2unix kmod openssl elfutils-libelf-devel dwarves \
+   openssl-devel libarchive zstd rsync libyaml-devel openssl-devel-engine --skip-unavailable
+ elif command -v pacman &> /dev/null; then
+  echo "[+] Arch-based system detected, using pacman..."
+  sudo pacman -Sy --needed --noconfirm base-devel
+  sudo pacman -S --needed --noconfirm dtc lz4 xz zlib jdk-openjdk python \
+   p7zip android-tools erofs-utils \
+   ncurses ccache libx11 readline mesa python-markdown \
+   libxml2 libxslt dos2unix kmod openssl libelf pahole \
+   libarchive zstd rsync libyam
+ else
+  echo "[-] Error: Can not determine package manager, please install dependencies manually" >&2
+  exit 1
+  fi
+  touch .requirements
 }
 
 if [ ! -f ".requirements" ]; then install_dependencies; fi
@@ -77,30 +84,30 @@ fi
 # 3. CHECK DEFCONFIG
 # ==============================================================================
 validate_defconfigs() {
-    local input_configs="$1"
-    local valid_names=""
-    local valid_paths=""
+ local input_configs="$1"
+ local valid_names=""
+ local valid_paths=""
 
-    for config in $input_configs; do
-     local config_path=$(find "${DEFCONFIG_DIR[@]}" -type f -name "$config" -print -quit 2>/dev/null)
-     if [ -n "$config_path" ]; then
-      valid_names="$valid_names $(basename "$config_path")"
-      valid_paths="$valid_paths $config_path"
-     else
-      echo "[-] Error: No such defconfig name '$config'" >&2
-      return 1
-     fi
-    done
-    VALID_DEFCONFIG_NAMES="${valid_names# }"
-    VALID_DEFCONFIG_PATHS="${valid_paths# }"
-    return 0
+ for config in $input_configs; do
+  local config_path=$(find "${DEFCONFIG_DIR[@]}" -type f -name "$config" -print -quit 2>/dev/null)
+  if [ -n "$config_path" ]; then
+   valid_names="$valid_names $(basename "$config_path")"
+   valid_paths="$valid_paths $config_path"
+  else
+   echo "[-] Error: No such defconfig name ${config}" >&2
+   return 1
+  fi
+ done
+ VALID_DEFCONFIG_NAMES="${valid_names# }"
+ VALID_DEFCONFIG_PATHS="${valid_paths# }"
+ return 0
 }
 
 if [ -z "$DEFCONFIG" ]; then
  while true; do
   read -p "Enter defconfig (supports multiple, space-separated): " user_input
    if [ -z "$user_input" ]; then
-    echo -e "\nDefconfig is necessary when building the kernel."
+    echo -e "\nDefconfig is necessary when building kernel"
     continue
    fi
    if validate_defconfigs "$user_input"; then
@@ -112,7 +119,7 @@ else
  if ! validate_defconfigs "$DEFCONFIG"; then exit 1; fi
  DEFCONFIG="$VALID_DEFCONFIG_NAMES"
 fi
-echo "[+] Using '$DEFCONFIG' as defconfig"
+echo "[+] Using ${DEFCONFIG} as defconfig"
 
 # ==============================================================================
 # 4. DETECT ARCHITECTURE
@@ -128,21 +135,18 @@ check_flag() {
 if check_flag "CONFIG_ARM64=y"; then
  export ARCH=arm64
  export CLANG_TRIPLE="aarch64-linux-gnu-"
- echo "[+] Detected 64-bit Kernel (arm64)"
- if [[ "$VERSION" -eq "4" && "$PATCHLEVEL" -le "14" ]]; then 
-  GCC64=true
- fi
-    
+ GCC64=true
  if check_flag "CONFIG_COMPAT_VDSO=y"; then
   GCC32=true
-  echo "[+] CONFIG_COMPAT_VDSO enabled. Kernel needs 64-bit & 32-bit GCC."
+  echo "[+] Detected 64-bit Kernel (aarch64). Kernel needs 64-bit & 32-bit GCC"
+ else
+  echo "[+] Detected 64-bit Kernel (aarch64). Kernel only needs 64-bit GCC"
  fi
 else
  export ARCH=arm
  export CLANG_TRIPLE="arm-linux-gnueabi-"
- GCC64=false
  GCC32=true
- echo "[+] Detected 32-bit Kernel (arm). Kernel only needs 32-bit GCC."
+ echo "[+] Detected 32-bit Kernel (arm). Kernel only needs 32-bit GCC"
 fi
 
 # ==============================================================================
@@ -159,81 +163,80 @@ fi
 # (OPTIONAL) INTEGRATE KERNELSU
 # ==============================================================================
 integrate_ksu () {
-    get_script "integrate_ksu.sh"
-    echo "[+] Downloading defconfig to enable KernelSU"
-    if ! curl -sL "$REPO_URL/defconfig/ksu_defconfig" -o "$KSU_DEFCONFIG"; then
-     echo "Error: Can not download DEFCONFIG." >&2
-     exit 1
-    fi
-    DEFCONFIG="${DEFCONFIG:+$DEFCONFIG }custom.config"
- }
+ get_script "integrate_ksu.sh"
+ echo "[+] Downloading defconfig to enable KernelSU"
+ if ! curl -sL "$REPO_URL/defconfig/ksu_defconfig" -o "$KSU_DEFCONFIG"; then
+  echo "Error: Can not download defconfig" >&2
+  exit 1
+ fi
+}
 
 integrate_ksu_susfs () {
-    get_script "integrate_ksu_susfs.sh"
-    echo "[+] Downloading defconfig to enable KernelSU with SUSFS"
-     if ! curl -sL "$REPO_URL/defconfig/ksu-susfs_defconfig" -o "$KSU_DEFCONFIG"; then
-     echo "[-] Error: Can not download DEFCONFIG." >&2
-    exit 1
-    fi
-    DEFCONFIG="${DEFCONFIG:+$DEFCONFIG }custom.config"
- }
+ get_script "integrate_ksu_susfs.sh"
+ echo "[+] Downloading defconfig to enable KernelSU with SUSFS"
+  if ! curl -sL "$REPO_URL/defconfig/ksu-susfs_defconfig" -o "$KSU_DEFCONFIG"; then
+   echo "[-] Error: Can not download DEFCONFIG." >&2
+   exit 1
+  fi
+}
 
 if [ -z "$KSU" ]; then
  while true; do
-  read -t 10 -p "Integrate KSU? [y/n] (Default [n]): " KSU || true
+  read -t 10 -p "Integrate KSU? [y/n]: " KSU || true
   if [[ "$KSU" = "Y" || "$KSU" = "y" || "$KSU" = "N" || "$KSU" = "n" || -z "$KSU" ]]; then
    break
   else
-   echo "Unknown command: '$KSU'"
+   echo "Unknown answer: ${KSU}"
   fi
  done
 fi
 
 if [[ "$KSU" = "Y" || "$KSU" = "y" ]]; then
  KSU_DEFCONFIG="$KERNEL_DIR/arch/$ARCH/configs/custom.config"
- if [[ ( "$VERSION" -eq "3" && "$PATCHLEVEL" -eq "18" ) || ( "$VERSION" -eq "4" && "$PATCHLEVEL" -eq "4" ) ]]; then
+ if [[ "$KERNEL_VERSION" = "3.18" && "$KERNEL_VERSION" = "4.4"]]; then
   echo "[+] Integrate KernelSU..."
   integrate_ksu
- elif [[ "$VERSION" -eq "4" || ( "$VERSION" -eq "5" && "$PATCHLEVEL" -eq "4" ) ]]; then
+ elif [[ "$VERSION" -eq "4" || "$KERNEL_VERSION" = "5.4" ]]; then
   echo "[+] Integrate KernelSU with SUSFS..."
   integrate_ksu_susfs
  else
-  echo "[-] This kernel script does not support kernel ${KERNEL_VERSION}" >&2
+  echo "[-] This kernel script does not support kernel ${KERNEL_VERSION}!" >&2
   exit 1
  fi
+ DEFCONFIG="${DEFCONFIG} custom.config"
 elif [[ "$KSU" = "N" || "$KSU" = "n" || -z "$KSU" ]]; then
-  echo "[-] Skipping integrate KernelSU into kernel"
+ echo "[-] Skipping integrate KernelSU!"
 else
-  echo "[-] Error: Unknown command '$KSU'" >&2
-  exit 1
+ echo "[-] Error: Unknown answer: ${KSU}" >&2
+ exit 1
 fi
 
 # ==============================================================================
 # 6. BUILD OPTIONS
 # ==============================================================================
 BUILD_OPTIONS=(
-    -C "${KERNEL_DIR}"
-    O="${KERNEL_DIR}/out"
-    -j"$(nproc)"
-    ARCH="${ARCH}"
-    CC="ccache ${CLANG_DIR}/bin/clang"
-    CLANG_TRIPLE="${CLANG_TRIPLE}"
+ -C "${KERNEL_DIR}"
+ O="${KERNEL_DIR}/out"
+ -j"$(nproc)"
+ ARCH="${ARCH}"
+ CC="ccache ${CLANG_DIR}/bin/clang"
+ CLANG_TRIPLE="${CLANG_TRIPLE}"
 )
 
-if [[ "$VERSION" -gt "4" ]] || [[ "$VERSION" -eq "4" && "$PATCHLEVEL" -ge "19" ]]; then
+if [[ "$VERSION" -gt "4" || ( "$VERSION" -eq "4" && "$PATCHLEVEL" -gt "14" ) ]]; then
  BUILD_OPTIONS+=( LLVM=1 LLVM_IAS=1 )
 elif [ "$ARCH" = "arm64" ]; then
  export CROSS_COMPILE="${GCC_DIR}/aarch64/bin/aarch64-linux-android-"
- BUILD_OPTIONS+=( CROSS_COMPILE="${CROSS_COMPILE}" )
+ if [ "$GCC32" = true ]; then
+  export CROSS_COMPILE_ARM32="${GCC_DIR}/arm/bin/arm-linux-androideabi-"
+  export CROSS_COMPILE_COMPAT="${GCC_DIR}/arm/bin/arm-linux-androideabi-"
+  BUILD_OPTIONS+=( CROSS_COMPILE="${CROSS_COMPILE}" CROSS_COMPILE_ARM32="${CROSS_COMPILE_ARM32}" CROSS_COMPILE_COMPAT="${CROSS_COMPILE_COMPAT}" )
+ else
+  BUILD_OPTIONS+=( CROSS_COMPILE="${CROSS_COMPILE}" )
+ fi
 else
  export CROSS_COMPILE="${GCC_DIR}/arm/bin/arm-linux-androideabi-"
  BUILD_OPTIONS+=( CROSS_COMPILE="${CROSS_COMPILE}" )
-fi
-
-if [ "$GCC32" = true ]; then
- export CROSS_COMPILE_ARM32="${GCC_DIR}/arm/bin/arm-linux-androideabi-"
- export CROSS_COMPILE_COMPAT="${GCC_DIR}/arm/bin/arm-linux-androideabi-"
- BUILD_OPTIONS+=( CROSS_COMPILE_ARM32="${CROSS_COMPILE_ARM32}" CROSS_COMPILE_COMPAT="${CROSS_COMPILE_COMPAT}" )
 fi
 
 # ==============================================================================
@@ -248,10 +251,8 @@ export USE_CCACHE=1
 export CCACHE_EXEC=$(command -v ccache || echo "/usr/bin/ccache")
 ccache -M 50G >/dev/null
 
-echo "================================================="
 echo "[+] Generating Defconfig..."
 make "${BUILD_OPTIONS[@]}" $DEFCONFIG 2>&1 | tee build.log
 
-echo "================================================="
 echo "[+] Compiling Kernel..."
 make "${BUILD_OPTIONS[@]}" 2>&1 | tee -a build.log
