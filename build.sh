@@ -252,7 +252,7 @@ export CCACHE_EXEC=$(command -v ccache || echo "/usr/bin/ccache")
 ccache -M 50G >/dev/null
 
 echo "[+] Generating Defconfig..."
-make "${BUILD_OPTIONS[@]}" $DEFCONFIG 2>&1 | tee build.log
+make "${BUILD_OPTIONS[@]}" $DEFCONFIG
 
 echo "[+] Compiling Kernel..."
 make "${BUILD_OPTIONS[@]}" 2>&1 | tee -a build.log
