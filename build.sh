@@ -220,11 +220,11 @@ if [[ "$VERSION" -gt "4" || ( "$VERSION" -eq "4" && "$PATCHLEVEL" -gt "14" ) ]];
  BUILD_OPTIONS+=( LLVM=1 LLVM_IAS=1 )
 fi
 
-if [ "$GCC64" = true ]; then
+if [ "$ARCH" = "arm64" ]; then
  export CROSS_COMPILE="${GCC_DIR}/aarch64/bin/aarch64-linux-android-"
- export CROSS_COMPILE="${GCC_DIR}/arm/bin/arm-linux-androideabi-"
+ export CROSS_COMPILE_ARM32="${GCC_DIR}/arm/bin/arm-linux-androideabi-"
  BUILD_OPTIONS+=( CROSS_COMPILE="${CROSS_COMPILE}" CROSS_COMPILE_ARM32="${CROSS_COMPILE_ARM32}" )
-elif [ "$GCC32" = true ]; then
+else
  export CROSS_COMPILE="${GCC_DIR}/arm/bin/arm-linux-androideabi-"
  BUILD_OPTIONS+=( CROSS_COMPILE="${CROSS_COMPILE}" )
 fi
