@@ -90,7 +90,9 @@ validate_defconfigs() {
  for config in $input_configs; do
   local config_path=$(find "${DEFCONFIG_DIR[@]}" -type f -name "$config" -print -quit 2>/dev/null)
   if [ -n "$config_path" ]; then
-   valid_names="$valid_names $(basename "$config_path")"
+   local rel_name="$config_path"
+   for dir in "${DEFCONFIG_DIR[@]}"; do rel_name="${rel_name#$dir/}"; done
+   valid_names="$valid_names $rel_name"
    valid_paths="$valid_paths $config_path"
   else
    echo "[-] Error: No such defconfig name ${config}" >&2
