@@ -124,7 +124,7 @@ echo "[+] Using ${DEFCONFIG} as defconfig"
 # 4. DETECT ARCHITECTURE
 # ==============================================================================
 if [[ "$VERSION" -le "4" || ( "$VERSION" -eq "4" && "$PATCHLEVEL" -le "14" ) ]]; then
- if [[ "$ARCH" = *"/arch/arm64/configs/"* ]]; then
+ if [[ "$VALID_DEFCONFIG_PATHS" = *"/arch/arm64/configs/"* ]]; then
   export ARCH=arm64
   export CLANG_TRIPLE="aarch64-linux-gnu-"
   GCC64=true && GCC32=true
