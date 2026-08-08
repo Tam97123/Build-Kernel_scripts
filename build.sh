@@ -194,16 +194,19 @@ fi
 if [[ "$KSU" = "Y" || "$KSU" = "y" ]]; then
  KSU_DEFCONFIG="$KERNEL_DIR/arch/$ARCH/configs/custom.config"
  if [ -f ".ksu_patch" ]; then
-  echo "Already integrate KernelSU!"
- elif [[ "$KERNEL_VERSION" = "3.18" && "$KERNEL_VERSION" = "4.4" ]]; then
-  echo "[+] Integrate KernelSU..."
-  integrate_ksu
- elif [[ "$VERSION" -eq "4" || "$KERNEL_VERSION" = "5.4" ]]; then
-  echo "[+] Integrate KernelSU with SUSFS..."
-  integrate_ksu_susfs
+  echo "Skipping integrate KernelSU!"
  else
-  echo "[-] This kernel script does not support kernel ${KERNEL_VERSION}!" >&2
-  exit 1
+  if [[ "$KERNEL_VERSION" = "3.18" && "$KERNEL_VERSION" = "4.4" ]]; then
+   echo "[+] Integrate KernelSU..."
+   integrate_ksu
+  elif [[ "$VERSION" -eq "4" || "$KERNEL_VERSION" = "5.4" ]]; then
+   echo "[+] Integrate KernelSU with SUSFS..."
+   integrate_ksu_susfs
+  else
+   echo "[-] This kernel script does not support kernel ${KERNEL_VERSION}!" >&2
+   exit 1
+  fi
+  touch .ksu_patch
  fi
  DEFCONFIG="${DEFCONFIG} custom.config"
 elif [[ "$KSU" = "N" || "$KSU" = "n" || -z "$KSU" ]]; then
