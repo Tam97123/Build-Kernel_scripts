@@ -98,6 +98,7 @@ validate_defconfigs() {
   fi
  done
  VALID_DEFCONFIG_NAMES="${valid_names# }"
+ VALID_DEFCONFIG_PATHS="${valid_paths# }"
  return 0
 }
 
@@ -123,12 +124,12 @@ echo "[+] Using ${DEFCONFIG} as defconfig"
 # 4. DETECT ARCHITECTURE
 # ==============================================================================
 if [[ "$VERSION" -le "4" || ( "$VERSION" -eq "4" && "$PATCHLEVEL" -le "14" ) ]]; then
- if [[ "$VALID_DEFCONFIG_PATHS" == *"/arch/arm64/configs/"* ]]; then
+ if [[ "$ARCH" = *"/arch/arm64/configs/"* ]]; then
   export ARCH=arm64
   export CLANG_TRIPLE="aarch64-linux-gnu-"
   GCC64=true && GCC32=true
   echo "[+] Kernel use aarch!"
- elif [[ "$VALID_DEFCONFIG_PATHS" == *"/arch/arm/configs/"* ]]; then
+ elif [[ "$VALID_DEFCONFIG_PATHS" = *"/arch/arm/configs/"* ]]; then
   export ARCH=arm
   export CLANG_TRIPLE="arm-linux-gnueabi-"
   GCC32=true
