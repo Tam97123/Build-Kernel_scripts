@@ -13,8 +13,6 @@ DEFCONFIG_DIR=(
  "$KERNEL_DIR/arch/arm64/configs"
  "$KERNEL_DIR/arch/arm/configs"
 )
-GCC64=false
-GCC32=false
 # Hardcode this variable if you dont want prompt
 DEFCONFIG=
 KSU=
@@ -41,7 +39,8 @@ install_dependencies () {
    default-jdk gnupg flex bison gperf build-essential zip curl ccache libc6-dev libncurses-dev libx11-dev libreadline-dev libgl1 libgl1-mesa-dev \
    make sudo bc grep tofrodos python3-markdown libxml2-utils xsltproc libtinfo6 \
    repo cpio kmod openssl libelf-dev pahole libssl-dev libarchive-tools zstd libyaml-dev --fix-missing
-  wget -q http://mirrors.kernel.org/ubuntu/pool/universe/n/ncurses/libtinfo5_6.3-2ubuntu0.2_amd64.deb && sudo dpkg -i libtinfo5_6.3-2ubuntu0.2_amd64.deb && rm -f libtinfo5_6.3-2ubuntu0.2_amd64.deb
+  wget https://archive.ubuntu.com/ubuntu/pool/universe/n/ncurses/libtinfo5_6.3-2_amd64.deb && sudo dpkg -i libtinfo5_6.3-2_amd64.deb && rm -f libtinfo5_6.3-2_amd64.deb
+  wget https://archive.ubuntu.com/ubuntu/pool/universe/n/ncurses/libncurses5_6.3-2_amd64.deb && sudo dpkg -i libncurses5_6.3-2_amd64.deb && rm -f libncurses5_6.3-2_amd64.deb
  elif command -v dnf &> /dev/null; then
   echo "[+] Fedora/RHEL-based system detected, using dnf..."
   sudo dnf group install -y "c-development" "development-tools"
@@ -99,7 +98,6 @@ validate_defconfigs() {
   fi
  done
  VALID_DEFCONFIG_NAMES="${valid_names# }"
- VALID_DEFCONFIG_PATHS="${valid_paths# }"
  return 0
 }
 
@@ -124,29 +122,18 @@ echo "[+] Using ${DEFCONFIG} as defconfig"
 # ==============================================================================
 # 4. DETECT ARCHITECTURE
 # ==============================================================================
-check_flag() {
-    local flag="$1"
-    for path in $VALID_DEFCONFIG_PATHS; do
-     if grep -q "$flag" "$path" 2>/dev/null; then return 0; fi
-    done
-    return 1
-}
-
-if check_flag "CONFIG_ARM64=y"; then
- export ARCH=arm64
- export CLANG_TRIPLE="aarch64-linux-gnu-"
- GCC64=true
- if check_flag "CONFIG_COMPAT_VDSO=y"; then
+if [[ "$VERSION" -le "4" || ( "$VERSION" -eq "4" && "$PATCHLEVEL" -le "14" ) ]]; then
+ if [[ "$VALID_DEFCONFIG_PATHS" == *"/arch/arm64/configs/"* ]]; then
+  export ARCH=arm64
+  export CLANG_TRIPLE="aarch64-linux-gnu-"
+  GCC64=true && GCC32=true
+  echo "[+] Kernel use aarch!"
+ elif [[ "$VALID_DEFCONFIG_PATHS" == *"/arch/arm/configs/"* ]]; then
+  export ARCH=arm
+  export CLANG_TRIPLE="arm-linux-gnueabi-"
   GCC32=true
-  echo "[+] Detected 64-bit Kernel (aarch64). Kernel needs 64-bit & 32-bit GCC"
- else
-  echo "[+] Detected 64-bit Kernel (aarch64). Kernel only needs 64-bit GCC"
+  echo "[+] Kernel use arm!"
  fi
-else
- export ARCH=arm
- export CLANG_TRIPLE="arm-linux-gnueabi-"
- GCC32=true
- echo "[+] Detected 32-bit Kernel (arm). Kernel only needs 32-bit GCC"
 fi
 
 # ==============================================================================
@@ -196,7 +183,7 @@ if [[ "$KSU" = "Y" || "$KSU" = "y" ]]; then
  if [ -f ".ksu_patch" ]; then
   echo "Skipping integrate KernelSU!"
  else
-  if [[ "$KERNEL_VERSION" = "3.18" && "$KERNEL_VERSION" = "4.4" ]]; then
+  if [[ "$KERNEL_VERSION" = "3.18" || "$KERNEL_VERSION" = "4.4" ]]; then
    echo "[+] Integrate KernelSU..."
    integrate_ksu
   elif [[ "$VERSION" -eq "4" || "$KERNEL_VERSION" = "5.4" ]]; then
@@ -230,16 +217,13 @@ BUILD_OPTIONS=(
 
 if [[ "$VERSION" -gt "4" || ( "$VERSION" -eq "4" && "$PATCHLEVEL" -gt "14" ) ]]; then
  BUILD_OPTIONS+=( LLVM=1 LLVM_IAS=1 )
-elif [ "$ARCH" = "arm64" ]; then
+fi
+
+if [ "$GCC64" = true ]; then
  export CROSS_COMPILE="${GCC_DIR}/aarch64/bin/aarch64-linux-android-"
- if [ "$GCC32" = true ]; then
-  export CROSS_COMPILE_ARM32="${GCC_DIR}/arm/bin/arm-linux-androideabi-"
-  export CROSS_COMPILE_COMPAT="${GCC_DIR}/arm/bin/arm-linux-androideabi-"
-  BUILD_OPTIONS+=( CROSS_COMPILE="${CROSS_COMPILE}" CROSS_COMPILE_ARM32="${CROSS_COMPILE_ARM32}" CROSS_COMPILE_COMPAT="${CROSS_COMPILE_COMPAT}" )
- else
-  BUILD_OPTIONS+=( CROSS_COMPILE="${CROSS_COMPILE}" )
- fi
-else
+ export CROSS_COMPILE="${GCC_DIR}/arm/bin/arm-linux-androideabi-"
+ BUILD_OPTIONS+=( CROSS_COMPILE="${CROSS_COMPILE}" CROSS_COMPILE_ARM32="${CROSS_COMPILE_ARM32}" )
+elif [ "$GCC32" = true ]; then
  export CROSS_COMPILE="${GCC_DIR}/arm/bin/arm-linux-androideabi-"
  BUILD_OPTIONS+=( CROSS_COMPILE="${CROSS_COMPILE}" )
 fi
