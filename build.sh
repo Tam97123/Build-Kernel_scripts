@@ -165,7 +165,7 @@ integrate_ksu_susfs () {
  get_script "integrate_ksu_susfs.sh"
  echo "[+] Downloading defconfig to enable KernelSU with SUSFS"
   if ! curl -sL "$REPO_URL/defconfig/ksu-susfs_defconfig" -o "$KSU_DEFCONFIG"; then
-   echo "[-] Error: Can not download DEFCONFIG." >&2
+   echo "[-] Error: Can not download defconfig" >&2
    exit 1
   fi
 }
@@ -247,4 +247,44 @@ echo "[+] Generating Defconfig..."
 make "${BUILD_OPTIONS[@]}" $DEFCONFIG
 
 echo "[+] Compiling Kernel..."
-make "${BUILD_OPTIONS[@]}" 2>&1 | tee -a build.log
+make "${BUILD_OPTIONS[@]}" 2>&1 | tee build.log
+echo "[INFO] BUILD succeed!"
+
+# ==============================================================================
+# 9. PREPARING ANYKERNEL3
+# ==============================================================================
+ANYKERNEL3_DIR="${KERNEL_DIR}/AnyKernel3"
+ZIP_NAME="Kernel_${KERNEL_VERSION}_$(date +%Y%m%d_%H%M%S).zip"
+IMAGE_DIR="${KERNEL_DIR}/out/arch/${ARCH}/boot"
+
+if [ ! -d "$ANYKERNEL3_DIR" ]; then
+ echo "Downloading AnyKernel3..."
+ if ! git clone -q https://github.com/Tam97123/AnyKernel3.git "$ANYKERNEL3_DIR"
+  echo "[-] Error: Can not download AnyKernel3!" >&2
+  exit 1
+ fi
+fi
+
+echo "[+] Copying Images..."
+if [ -f "$IMAGE_DIR/Image.gz-dtb" ]; then
+ cp "${IMAGE_DIR}/Image.gz-dtb" "$ANYKERNEL3_DIR/"
+elif [ -f "$IMAGE_DIR/Image" ]; then
+ cp "${IMAGE_DIR}/Image" "$ANYKERNEL3_DIR/"
+fi
+find "${KERNEL_DIR}/out" -type f -name "*.img" 2>/dev/null | while read -r img_file; do cp "$img_file" "$ANYKERNEL3_DIR/"; done
+
+
+if grep -qE "\.ko|Building modules|INSTALL_MOD_PATH" build.log 2>/dev/null && [ -n "$(find "${KERNEL_DIR}/out" -type f -name "*.ko" -print -quit 2>/dev/null)" ]; then
+ echo "[+] Copying modules (.ko)..."
+ MODULES_PATH="${ANYKERNEL3_DIR}/modules/system/lib/modules"
+ mkdir -p "$MODULES_PATH"
+ find "${KERNEL_DIR}/out" -type f -name "*.ko" -exec cp {} "$MODULES_PATH/" \;
+ sed -i 's/do\.modules=0/do.modules=1/' "${ANYKERNEL3_DIR}/anykernel.sh"
+fi
+
+# ==============================================================================
+# 10. PACKAGE ANYKERNEL3 ZIP
+# ==============================================================================
+echo "[+] Creating AnyKernel3 zip package..."
+cd "$ANYKERNEL3_DIR"
+zip -r9 "${KERNEL_DIR}/$ZIP_NAME" . -x "*.git*" "*.zip" > /dev/null
