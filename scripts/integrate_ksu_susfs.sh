@@ -55,10 +55,11 @@ move_rejects() {
  mkdir -p "$REJECT_DIR"
   for rej_file in "${REJ_FILES[@]}"; do
    [ -z "$rej_file" ] && continue
-   local rej_dir
-   rej_dir="${$(dirname "$rej_file")#$KERNEL_DIR/}"
-   mkdir -p "$REJECT_DIR/$rej_dir" 
-   mv "$rej_file" "$REJECT_DIR/$rej_dir"
+   local rej_dir && local rel_dir
+   rej_dir=$(dirname "$rej_file")
+   rel_dir="${rej_dir#$KERNEL_DIR/}"
+   mkdir -p "$REJECT_DIR/$rel_dir"
+   mv "$rej_file" "$REJECT_DIR/$rel_dir/"
   done
 }
 
