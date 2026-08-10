@@ -82,25 +82,25 @@ if [ ! -f ".requirements" ]; then install_dependencies; fi
 # ==============================================================================
 # 3. CHECK DEFCONFIG
 # ==============================================================================
-validate_defconfigs() {
+check_defconfigs() {
  local input_configs="$1"
- local valid_names=""
- local valid_paths=""
+ local check_defconfigs_name
+ local check_defconfigs_path
 
  for config in $input_configs; do
   local config_path=$(find "${DEFCONFIG_DIR[@]}" -type f -name "$config" -print -quit 2>/dev/null)
   if [ -n "$config_path" ]; then
    local rel_name="$config_path"
    for dir in "${DEFCONFIG_DIR[@]}"; do rel_name="${rel_name#$dir/}"; done
-   valid_names="$valid_names $rel_name"
-   valid_paths="$valid_paths $config_path"
+   check_defconfigs_name="$check_defconfigs_name $rel_name"
+   check_defconfigs_path="$check_defconfigs_path $config_path"
   else
    echo "[-] Error: No such defconfig name ${config}" >&2
    return 1
   fi
  done
- VALID_DEFCONFIG_NAMES="${valid_names# }"
- VALID_DEFCONFIG_PATHS="${valid_paths# }"
+ DEFCONFIGS_NAMES="${check_defconfigs_name# }"
+ DEFCONFIGS_PATHS="${check_defconfigs_path# }"
  return 0
 }
 
@@ -111,27 +111,27 @@ if [ -z "$DEFCONFIG" ]; then
     echo -e "\nDefconfig is necessary when building kernel"
     continue
    fi
-   if validate_defconfigs "$user_input"; then
-    DEFCONFIG="$VALID_DEFCONFIG_NAMES"
+   if check_defconfigs "$user_input"; then
+    DEFCONFIG="$DEFCONFIGS_NAMES"
     break
   fi
  done
 else
- if ! validate_defconfigs "$DEFCONFIG"; then exit 1; fi
- DEFCONFIG="$VALID_DEFCONFIG_NAMES"
+ if ! check_defconfigs "$DEFCONFIG"; then exit 1; fi
+ DEFCONFIG="$DEFCONFIGS_NAMES"
 fi
-echo "[+] Using ${DEFCONFIG} as defconfig"
+echo "[+] Using ${DEFCONFIG} as defconfig!"
 
 # ==============================================================================
 # 4. DETECT ARCHITECTURE
 # ==============================================================================
 if [[ "$VERSION" -le "4" || ( "$VERSION" -eq "4" && "$PATCHLEVEL" -le "14" ) ]]; then
- if [[ "$VALID_DEFCONFIG_PATHS" = *"/arch/arm64/configs/"* ]]; then
+ if [[ "$DEFCONFIGS_PATHS" = *"/arch/arm64/configs/"* ]]; then
   export ARCH=arm64
   export CLANG_TRIPLE="aarch64-linux-gnu-"
   GCC64=true && GCC32=true
   echo "[+] Kernel use aarch!"
- elif [[ "$VALID_DEFCONFIG_PATHS" = *"/arch/arm/configs/"* ]]; then
+ elif [[ "$DEFCONFIGS_PATHS" = *"/arch/arm/configs/"* ]]; then
   export ARCH=arm
   export CLANG_TRIPLE="arm-linux-gnueabi-"
   GCC32=true
