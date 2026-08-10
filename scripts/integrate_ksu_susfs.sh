@@ -26,7 +26,6 @@ if [ ! -f "$KERNEL_DIR/.ksu_patch" ]; then
   echo "[-] Error: Cannot download script." >&2
   exit 1
  fi
- chmod +x susfs_inline_hook_patches.sh
  bash susfs_inline_hook_patches.sh >/dev/null 2>&1
  rm -f susfs_inline_hook_patches.sh
  if [ ! -f "$KERNEL_DIR/susfs_patch_to_${KERNEL_VERSION}" ]; then
@@ -53,29 +52,29 @@ if [ "$REJ_COUNT" -eq 1 ] && [ -z "${REJ_FILES[0]}" ]; then
 fi
 
 move_rejects() {
-    mkdir -p "$REJECT_DIR"
-    for rej_file in "${REJ_FILES[@]}"; do
-     [ -z "$rej_file" ] && continue
-     local rej_dir
-     rej_dir=$(dirname "$rej_file")
-     mkdir -p "$REJECT_DIR/$rej_dir" 
-     mv "$rej_file" "$REJECT_DIR/$rej_dir/"
-    done
+ mkdir -p "$REJECT_DIR"
+  for rej_file in "${REJ_FILES[@]}"; do
+   [ -z "$rej_file" ] && continue
+   local rej_dir
+   rej_dir="${$(dirname "$rej_file")#$KERNEL_DIR/}"
+   mkdir -p "$REJECT_DIR/$rej_dir" 
+   mv "$rej_file" "$REJECT_DIR/$rej_dir"
+  done
 }
 
 delete_rejects() {
-    for rej_file in "${REJ_FILES[@]}"; do
-     [ -z "$rej_file" ] && continue
-     rm -f "$rej_file"
-    done
+ for rej_file in "${REJ_FILES[@]}"; do
+  [ -z "$rej_file" ] && continue
+  rm -f "$rej_file"
+ done
 }
 
 if [ "$REJ_COUNT" -gt 0 ]; then
- echo "[-] Warning: Found $REJ_COUNT failed patch rejections (.rej)!"
+ echo "[!] Warning: Found $REJ_COUNT failed patch rejections!"
  while true; do
-  read -t 10 -p "Continue them?: " COLLECT_REJECTS || true
+  read -t 10 -p "[?] Continue?: " COLLECT_REJECTS || true
   if [ -z "$COLLECT_REJECTS" ]; then
-   echo -e "\n[+] No respone. Collecting rejects into $REJECT_DIR and continue"
+   echo -e "\n[\] No responed! Collecting rejects into $REJECT_DIR and continue"
    move_rejects
    break
   elif [[ "$COLLECT_REJECTS" == "Y" || "$COLLECT_REJECTS" == "y" ]]; then
