@@ -129,12 +129,12 @@ if [[ "$VERSION" -le "4" || ( "$VERSION" -eq "4" && "$PATCHLEVEL" -le "14" ) ]];
  if [[ "$DEFCONFIGS_PATHS" = *"/arch/arm64/configs/"* ]]; then
   export ARCH=arm64
   export CLANG_TRIPLE="aarch64-linux-gnu-"
-  GCC64=true
+  GCC64=true && GCC32=false
   echo "[+] Kernel use aarch!"
  elif [[ "$DEFCONFIGS_PATHS" = *"/arch/arm/configs/"* ]]; then
   export ARCH=arm
   export CLANG_TRIPLE="arm-linux-gnueabi-"
-  GCC32=true
+  GCC64=false && GCC32=true
   echo "[+] Kernel use arm!"
  fi
 fi
