@@ -6,8 +6,6 @@ CLANG_NAME="${CLANG_NAME:-$(grep -hoE 'clang-r[0-9]+[a-z]*' "$KERNEL_DIR"/build.
 if [ -z "$CLANG_NAME" ]; then
  echo "[-] Error: Cannot identify clang name." >&2
  exit 1
-else
- echo "[+] Target Clang version: $CLANG_NAME"
 fi
 
 echo "[+] Fetching AOSP history..."
