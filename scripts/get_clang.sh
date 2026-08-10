@@ -37,5 +37,3 @@ git checkout "$CLANG_TARGET" >/dev/null 2>&1
 mkdir -p "${CLANG_DIR%/*}"
 mv "$CLANG_NAME" "$CLANG_DIR"
 cd $KERNEL_DIR && rm -rf aosp_clang
-
-echo "[+] Clang toolchain successfully set up"
