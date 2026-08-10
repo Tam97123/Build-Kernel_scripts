@@ -176,15 +176,15 @@ if [ -z "$KSU" ]; then
   if [[ "$KSU" = "Y" || "$KSU" = "y" || "$KSU" = "N" || "$KSU" = "n" || -z "$KSU" ]]; then
    break
   else
-   echo "Unknown answer: ${KSU}"
+   echo "[?] Unknown answer: ${KSU}"
   fi
  done
 fi
 
 if [[ "$KSU" = "Y" || "$KSU" = "y" ]]; then
- KSU_DEFCONFIG="$KERNEL_DIR/arch/$ARCH/configs/custom.config"
+ KSU_DEFCONFIG="${KERNEL_DIR}/arch/${ARCH}/configs/custom.config"
  if [ -f ".ksu_patch" ]; then
-  echo "Skipping integrate KernelSU!"
+  echo "[\] Skipping integrate KernelSU!"
  else
   if [[ "$KERNEL_VERSION" = "3.18" || "$KERNEL_VERSION" = "4.4" ]]; then
    echo "[+] Integrate KernelSU..."
@@ -199,8 +199,10 @@ if [[ "$KSU" = "Y" || "$KSU" = "y" ]]; then
   touch .ksu_patch
  fi
  DEFCONFIG="${DEFCONFIG} custom.config"
-elif [[ "$KSU" = "N" || "$KSU" = "n" || -z "$KSU" ]]; then
+elif [[ "$KSU" = "N" || "$KSU" = "n" ]]; then
  echo "[-] Skipping integrate KernelSU!"
+elif [ -z "$KSU" ]; then
+ echo -e "\n[\] Skipping integrate KernelSU!"
 else
  echo "[-] Error: Unknown answer: ${KSU}" >&2
  exit 1
@@ -285,6 +287,7 @@ fi
 # ==============================================================================
 # 10. PACKAGE ANYKERNEL3 ZIP
 # ==============================================================================
-echo "[+] Creating AnyKernel3 zip package..."
+echo "[+] Creating AnyKernel3.zip..."
 cd "$ANYKERNEL3_DIR"
 zip -r9 "${KERNEL_DIR}/${ZIP_NAME}" . -x "*.git*" > /dev/null
+cd .. && rm -rf "$ANYKERNEL3_DIR"
