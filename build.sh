@@ -84,8 +84,8 @@ if [ ! -f ".requirements" ]; then install_dependencies; fi
 # ==============================================================================
 check_defconfigs() {
  local input_configs="$1"
- local check_defconfigs_name
- local check_defconfigs_path
+ local check_defconfigs_name=
+ local check_defconfigs_path=
 
  for config in $input_configs; do
   local config_path=$(find "${DEFCONFIG_DIR[@]}" -type f -name "$config" -print -quit 2>/dev/null)
@@ -184,7 +184,7 @@ fi
 if [[ "$KSU" = "Y" || "$KSU" = "y" ]]; then
  KSU_DEFCONFIG="${KERNEL_DIR}/arch/${ARCH}/configs/custom.config"
  if [ -f ".ksu_patch" ]; then
-  echo "[\] Skipping integrate KernelSU!"
+  echo "[\] Already integrate KernelSU!"
  else
   if [[ "$KERNEL_VERSION" = "3.18" || "$KERNEL_VERSION" = "4.4" ]]; then
    echo "[+] Integrate KernelSU..."
