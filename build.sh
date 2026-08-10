@@ -129,7 +129,7 @@ if [[ "$VERSION" -le "4" || ( "$VERSION" -eq "4" && "$PATCHLEVEL" -le "14" ) ]];
  if [[ "$DEFCONFIGS_PATHS" = *"/arch/arm64/configs/"* ]]; then
   export ARCH=arm64
   export CLANG_TRIPLE="aarch64-linux-gnu-"
-  GCC64=true && GCC32=true
+  GCC64=true
   echo "[+] Kernel use aarch!"
  elif [[ "$DEFCONFIGS_PATHS" = *"/arch/arm/configs/"* ]]; then
   export ARCH=arm
@@ -217,6 +217,7 @@ BUILD_OPTIONS=(
  -j"$(nproc)"
  ARCH="${ARCH}"
  CC="ccache ${CLANG_DIR}/bin/clang"
+ LD="${CLANG_DIR}/bin/ld.lld"
  CLANG_TRIPLE="${CLANG_TRIPLE}"
 )
 
@@ -236,9 +237,9 @@ fi
 # ==============================================================================
 # 7. BUILDING PROCESS
 # ==============================================================================
-export KBUILD_BUILD_USER="@Tam97123"
+export KBUILD_BUILD_USER='t.me/Id5523842976" /*'
+export KBUILD_BUILD_HOST='*/ "'
 export PATH="${CLANG_DIR}/bin:${PATH}"
-export LD_LIBRARY_PATH="${CLANG_DIR}/lib:${CLANG_DIR}/lib64:${LD_LIBRARY_PATH:-}"
 
 # Export ccache to speed up building
 export USE_CCACHE=1
@@ -289,5 +290,5 @@ fi
 # ==============================================================================
 echo "[+] Creating AnyKernel3.zip..."
 cd "$ANYKERNEL3_DIR"
-zip -r9 "${KERNEL_DIR}/${ZIP_NAME}" . -x "*.git*" > /dev/null
-cd .. && rm -rf "$ANYKERNEL3_DIR"
+zip -r9 "${KERNEL_DIR}/${ZIP_NAME}" . -x "*.git*" > /dev/null && rm -rf "$ANYKERNEL3_DIR"
+echo "[INFO] AnyKernel3 created at ${KERNEL_DIR}/${ZIP_NAME}"
