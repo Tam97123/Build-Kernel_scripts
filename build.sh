@@ -14,8 +14,8 @@ DEFCONFIG_DIR=(
  "$KERNEL_DIR/arch/arm/configs"
 )
 # Hardcode this variable if you dont want prompt
-DEFCONFIG=xtd_defconfig
-KSU=y
+DEFCONFIG=
+KSU=
 
 get_script() {
  local script_name="$1"
@@ -29,7 +29,20 @@ get_script() {
 }
 
 # ==============================================================================
-# 1. DEPENDENCIES & OS CHECK
+# 1. CHECK KERNEL VERSION
+# ==============================================================================
+if [ -z "$VERSION" ] || [ -z "$PATCHLEVEL" ]; then
+ echo "[-] Error: Can not detect kernel version!" >&2
+ exit 1
+elif [[ ( "$VERSION" -eq "5" && "$PATCHLEVEL" -gt "4" ) || "$VERSION" -gt "5" ]]; then
+ echo "[-] Not supporting GKI kernel ${KERNEL_VERSION}!"
+ exit 1
+else
+ echo "[+] Detected kernel ${KERNEL_VERSION}!"
+fi
+
+# ==============================================================================
+# 2. DEPENDENCIES & OS CHECK
 # ==============================================================================
 install_dependencies () {
  echo "[+] Detecting OS and installing dependencies..."
@@ -65,19 +78,6 @@ install_dependencies () {
 }
 
 if [ ! -f ".requirements" ]; then install_dependencies; fi
-
-# ==============================================================================
-# 2. CHECK KERNEL VERSION
-# ==============================================================================
-if [ -z "$VERSION" ] || [ -z "$PATCHLEVEL" ]; then
- echo "[-] Error: Can not detect kernel version!" >&2
- exit 1
-elif [[ ( "$VERSION" -eq "5" && "$PATCHLEVEL" -gt "4" ) || "$VERSION" -gt "5" ]]; then
- echo "[-] Not supporting GKI kernel ${KERNEL_VERSION}!"
- exit 1
-else
- echo "[+] Detected kernel ${KERNEL_VERSION}!"
-fi
 
 # ==============================================================================
 # 3. CHECK DEFCONFIG
