@@ -106,9 +106,9 @@ check_defconfigs() {
 
 if [ -z "$DEFCONFIG" ]; then
  while true; do
-  read -p "Enter defconfig (supports multiple, space-separated): " user_input
+  read -p "[?] Enter defconfig (supports multiple, space-separated): " user_input
    if [ -z "$user_input" ]; then
-    echo -e "\nDefconfig is necessary when building kernel"
+    echo -e "\n[!] Defconfig is necessary when building kernel"
     continue
    fi
    if check_defconfigs "$user_input"; then
@@ -130,12 +130,12 @@ if [[ "$VERSION" -le "4" || ( "$VERSION" -eq "4" && "$PATCHLEVEL" -le "14" ) ]];
   export ARCH=arm64
   export CLANG_TRIPLE="aarch64-linux-gnu-"
   GCC64=true && GCC32=false
-  echo "[+] Kernel use aarch!"
+  echo "[+] Kernel's architecture is aarch!"
  elif [[ "$DEFCONFIGS_PATHS" = *"/arch/arm/configs/"* ]]; then
   export ARCH=arm
   export CLANG_TRIPLE="arm-linux-gnueabi-"
   GCC64=false && GCC32=true
-  echo "[+] Kernel use arm!"
+  echo "[+] Kernel's architecture is arm!"
  fi
 fi
 
@@ -156,7 +156,7 @@ integrate_ksu () {
  get_script "integrate_ksu.sh"
  echo "[+] Downloading defconfig to enable KernelSU"
  if ! curl -sL "$REPO_URL/defconfig/ksu_defconfig" -o "$KSU_DEFCONFIG"; then
-  echo "Error: Can not download defconfig" >&2
+  echo "[-] Error: Can not download defconfig" >&2
   exit 1
  fi
 }
@@ -237,8 +237,8 @@ fi
 # ==============================================================================
 # 7. BUILDING PROCESS
 # ==============================================================================
-export KBUILD_BUILD_USER='t.me/Id5523842976" /*'
-export KBUILD_BUILD_HOST='*/ "'
+export KBUILD_BUILD_USER=t.me
+export KBUILD_BUILD_HOST=Id5523842976
 export PATH="${CLANG_DIR}/bin:${PATH}"
 
 # Export ccache to speed up building
