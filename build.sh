@@ -14,8 +14,8 @@ DEFCONFIG_DIR=(
  "$KERNEL_DIR/arch/arm/configs"
 )
 # Hardcode this variable if you dont want prompt
-DEFCONFIG=
-KSU=
+DEFCONFIG=xtd_defconfig
+KSU=y
 
 get_script() {
  local script_name="$1"
@@ -254,12 +254,12 @@ echo "[INFO] BUILD succeed!"
 # 9. PREPARING ANYKERNEL3
 # ==============================================================================
 ANYKERNEL3_DIR="${KERNEL_DIR}/AnyKernel3"
-ZIP_NAME="Kernel_${KERNEL_VERSION}_$(date +%Y%m%d_%H%M%S).zip"
+ZIP_NAME="Kernel_${KERNEL_VERSION}_$(date +%y%m%d).zip"
 IMAGE_DIR="${KERNEL_DIR}/out/arch/${ARCH}/boot"
 
 if [ ! -d "$ANYKERNEL3_DIR" ]; then
- echo "Downloading AnyKernel3..."
- if ! git clone -q https://github.com/Tam97123/AnyKernel3.git "$ANYKERNEL3_DIR"
+ echo "[+] Downloading AnyKernel3..."
+ if ! git clone -q https://github.com/Tam97123/AnyKernel3-NonGKI "$ANYKERNEL3_DIR"; then
   echo "[-] Error: Can not download AnyKernel3!" >&2
   exit 1
  fi
@@ -287,4 +287,4 @@ fi
 # ==============================================================================
 echo "[+] Creating AnyKernel3 zip package..."
 cd "$ANYKERNEL3_DIR"
-zip -r9 "${KERNEL_DIR}/$ZIP_NAME" . -x "*.git*" "*.zip" > /dev/null
+zip -r9 "${KERNEL_DIR}/${ZIP_NAME}" . -x "*.git*" > /dev/null
