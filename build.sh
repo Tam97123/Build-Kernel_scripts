@@ -247,6 +247,7 @@ echo "[+] Generating Defconfig..."
 make "${BUILD_OPTIONS[@]}" $DEFCONFIG
 
 echo "[+] Compiling Kernel..."
+[ -f "${KERNEL_DIR}/build.log && rm -f build.log
 make "${BUILD_OPTIONS[@]}" 2>&1 | tee build.log
 echo "[INFO] BUILD succeed!"
 
