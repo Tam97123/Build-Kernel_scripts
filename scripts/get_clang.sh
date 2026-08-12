@@ -1,6 +1,5 @@
 #!/bin/bash
 
-echo "[+] Setting up Clang toolchain..."
 CLANG_NAME="${CLANG_NAME:-$(grep -hoE 'clang-r[0-9]+[a-z]*' "$KERNEL_DIR"/build.config.* 2>/dev/null | head -n 1)}"
 
 if [ -z "$CLANG_NAME" ]; then
@@ -8,11 +7,11 @@ if [ -z "$CLANG_NAME" ]; then
  exit 1
 fi
 
-echo "[+] Fetching AOSP history..."
+echo "[+] Fetching AOSP clang in history..."
 
 if ! git clone --filter=blob:none --no-checkout https://android.googlesource.com/platform/prebuilts/clang/host/linux-x86 aosp_clang >/dev/null 2>&1; then
  cd $KERNEL_DIR && rm -rf aosp_clang
- echo "[-] Error: Cannot fetch AOSP history from Google." >&2
+ echo "[-] Error: Cannot fetch AOSP clang in history from Google." >&2
  exit 1
 fi
 
