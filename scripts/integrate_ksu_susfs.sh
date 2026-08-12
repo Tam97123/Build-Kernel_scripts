@@ -85,6 +85,7 @@ if [ "$REJ_COUNT" -gt 0 ]; then
   elif [[ "$COLLECT_REJECTS" == "N" || "$COLLECT_REJECTS" == "n" ]]; then
    echo "[-] Collecting rejects into $REJECT_DIR and abort" >&2
    move_rejects
+   touch .ksu_patch
    exit 1
   else
    echo "[?] Unknown answer: '$COLLECT_REJECTS'"
