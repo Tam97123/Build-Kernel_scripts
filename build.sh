@@ -107,13 +107,13 @@ check_defconfigs() {
 if [ -z "$DEFCONFIG" ]; then
  while true; do
   read -p "[?] Enter defconfig (supports multiple, space-separated): " user_input
-   if [ -z "$user_input" ]; then
-    echo -e "\n[!] Defconfig is necessary when building kernel!"
-    continue
-   fi
-   if check_defconfigs "$user_input"; then
-    DEFCONFIG="$DEFCONFIGS_NAMES"
-    break
+  if [ -z "$user_input" ]; then
+   echo -e "\n[!] Defconfig is necessary when building kernel!"
+   continue
+  fi
+  if check_defconfigs "$user_input"; then
+   DEFCONFIG="$DEFCONFIGS_NAMES"
+   break
   fi
  done
 else
@@ -153,6 +153,7 @@ fi
 # (OPTIONAL) INTEGRATE KERNELSU
 # ==============================================================================
 integrate_ksu () {
+ if [
  get_script "integrate_ksu.sh"
  echo "[+] Downloading defconfig to enable KernelSU"
  if ! curl -sL "$REPO_URL/defconfig/ksu_defconfig" -o "$KSU_DEFCONFIG"; then
@@ -174,7 +175,7 @@ if [ -z "$KSU" ]; then
  while true; do
   read -t 10 -p "Integrate KSU? [y/n]: " KSU || true
   if [[ "$KSU" = "Y" || "$KSU" = "y" || "$KSU" = "N" || "$KSU" = "n" || -z "$KSU" ]]; then
-   [ -n "$KSU" ] && sed -i "s/^KSU=.*/KSU=$KSU/" "${BASH_SOURCE[0]}
+   [ -n "$KSU" ] && sed -i "s/^KSU=.*/KSU=$KSU/" "${BASH_SOURCE[0]}"
    break
   else
    echo "[?] Unknown answer: ${KSU}"
