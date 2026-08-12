@@ -108,7 +108,7 @@ if [ -z "$DEFCONFIG" ]; then
  while true; do
   read -p "[?] Enter defconfig (supports multiple, space-separated): " user_input
    if [ -z "$user_input" ]; then
-    echo -e "\n[!] Defconfig is necessary when building kernel"
+    echo -e "\n[!] Defconfig is necessary when building kernel!"
     continue
    fi
    if check_defconfigs "$user_input"; then
@@ -129,13 +129,13 @@ if [[ "$VERSION" -le "4" || ( "$VERSION" -eq "4" && "$PATCHLEVEL" -le "14" ) ]];
  if [[ "$DEFCONFIGS_PATHS" = *"/arch/arm64/configs/"* ]]; then
   export ARCH=arm64
   export CLANG_TRIPLE="aarch64-linux-gnu-"
-  GCC64=true && GCC32=false
-  echo "[+] Kernel's architecture is aarch!"
+  GCC64=true && GCC32=true
+  echo "[+] Kernel's architecture is ARM64!"
  elif [[ "$DEFCONFIGS_PATHS" = *"/arch/arm/configs/"* ]]; then
   export ARCH=arm
   export CLANG_TRIPLE="arm-linux-gnueabi-"
   GCC64=false && GCC32=true
-  echo "[+] Kernel's architecture is arm!"
+  echo "[+] Kernel's architecture is ARM!"
  fi
 fi
 
@@ -174,6 +174,7 @@ if [ -z "$KSU" ]; then
  while true; do
   read -t 10 -p "Integrate KSU? [y/n]: " KSU || true
   if [[ "$KSU" = "Y" || "$KSU" = "y" || "$KSU" = "N" || "$KSU" = "n" || -z "$KSU" ]]; then
+   [ -n "$KSU" ] && sed -i "s/^KSU=.*/KSU=$KSU/" "${BASH_SOURCE[0]}
    break
   else
    echo "[?] Unknown answer: ${KSU}"
@@ -183,20 +184,15 @@ fi
 
 if [[ "$KSU" = "Y" || "$KSU" = "y" ]]; then
  KSU_DEFCONFIG="${KERNEL_DIR}/arch/${ARCH}/configs/custom.config"
- if [ -f ".ksu_patch" ]; then
-  echo "[\] Already integrate KernelSU!"
+ if [[ "$KERNEL_VERSION" = "3.18" || "$KERNEL_VERSION" = "4.4" ]]; then
+  echo "[+] Integrate KernelSU..."
+  integrate_ksu
+ elif [[ "$VERSION" -eq "4" || "$KERNEL_VERSION" = "5.4" ]]; then
+  echo "[+] Integrate KernelSU with SUSFS..."
+  integrate_ksu_susfs
  else
-  if [[ "$KERNEL_VERSION" = "3.18" || "$KERNEL_VERSION" = "4.4" ]]; then
-   echo "[+] Integrate KernelSU..."
-   integrate_ksu
-  elif [[ "$VERSION" -eq "4" || "$KERNEL_VERSION" = "5.4" ]]; then
-   echo "[+] Integrate KernelSU with SUSFS..."
-   integrate_ksu_susfs
-  else
-   echo "[-] This kernel script does not support kernel ${KERNEL_VERSION}!" >&2
-   exit 1
-  fi
-  touch .ksu_patch
+  echo "[-] This kernel script does not support kernel ${KERNEL_VERSION}!" >&2
+  exit 1
  fi
  DEFCONFIG="${DEFCONFIG} custom.config"
 elif [[ "$KSU" = "N" || "$KSU" = "n" ]]; then
