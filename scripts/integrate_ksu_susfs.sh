@@ -39,6 +39,7 @@ if [ ! -f "$KERNEL_DIR/.ksu_patch" ]; then
   patch -p1 < "susfs_patch_to_${KERNEL_VERSION}.patch" || true
   rm -f susfs_patch_to_${KERNEL_VERSION}.patch
  fi
+ touch .ksu_patch
 fi
 
 # ==============================================================================
@@ -71,7 +72,7 @@ delete_rejects() {
 }
 
 if [ "$REJ_COUNT" -gt 0 ]; then
- echo "[!] Warning: Found $REJ_COUNT failed patch rejections!"
+ echo "[!] Warning: Found $REJ_COUNT failed patches!"
  while true; do
   read -t 10 -p "[?] Continue?: " COLLECT_REJECTS || true
   if [ -z "$COLLECT_REJECTS" ]; then
@@ -85,7 +86,6 @@ if [ "$REJ_COUNT" -gt 0 ]; then
   elif [[ "$COLLECT_REJECTS" == "N" || "$COLLECT_REJECTS" == "n" ]]; then
    echo "[-] Collecting rejects into $REJECT_DIR and abort" >&2
    move_rejects
-   touch .ksu_patch
    exit 1
   else
    echo "[?] Unknown answer: '$COLLECT_REJECTS'"
