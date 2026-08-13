@@ -153,7 +153,6 @@ fi
 # (OPTIONAL) INTEGRATE KERNELSU
 # ==============================================================================
 integrate_ksu () {
- if [
  get_script "integrate_ksu.sh"
  echo "[+] Downloading defconfig to enable KernelSU"
  if ! curl -sL "$REPO_URL/defconfig/ksu_defconfig" -o "$KSU_DEFCONFIG"; then
@@ -234,8 +233,6 @@ fi
 # ==============================================================================
 # 7. BUILDING PROCESS
 # ==============================================================================
-export KBUILD_BUILD_USER=t.me
-export KBUILD_BUILD_HOST=Id5523842976
 export PATH="${CLANG_DIR}/bin:${PATH}"
 
 # Export ccache to speed up building
