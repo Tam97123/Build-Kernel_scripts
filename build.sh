@@ -5,7 +5,7 @@ KERNEL_DIR=$(pwd)
 VERSION=$(grep -w '^VERSION' Makefile | tr -d ' ' | cut -d= -f2 || echo "")
 PATCHLEVEL=$(grep -w '^PATCHLEVEL' Makefile | tr -d ' ' | cut -d= -f2 || echo "")
 KERNEL_VERSION="${VERSION}.${PATCHLEVEL}"
-REPO_URL="https://raw.githubusercontent.com/Tam97123/Build-Kernel_scripts/refs/heads/main"
+REPO_URL="https://raw.githubusercontent.com/Tam97123/Build-Kernel_scripts/refs/heads/myself"
 TOOLCHAIN_DIR="$KERNEL_DIR/toolchain"
 CLANG_DIR="$TOOLCHAIN_DIR/clang"
 GCC_DIR="$TOOLCHAIN_DIR/gcc"
@@ -233,6 +233,8 @@ fi
 # ==============================================================================
 # 7. BUILDING PROCESS
 # ==============================================================================
+export KBUILD_BUILD_USER=t.me
+export KBUILD_BUILD_HOST=Id5523842976
 export PATH="${CLANG_DIR}/bin:${PATH}"
 
 # Export ccache to speed up building
@@ -257,7 +259,7 @@ IMAGE_DIR="${KERNEL_DIR}/out/arch/${ARCH}/boot"
 
 if [ ! -d "$ANYKERNEL3_DIR" ]; then
  echo "[+] Downloading AnyKernel3..."
- if ! git clone -q https://github.com/Tam97123/AnyKernel3-NonGKI "$ANYKERNEL3_DIR"; then
+ if ! git clone -q https://github.com/Tam97123/AnyKernel3-NonGKI -b myself "$ANYKERNEL3_DIR"; then
   echo "[-] Error: Can not download AnyKernel3!" >&2
   exit 1
  fi
