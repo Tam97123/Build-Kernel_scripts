@@ -170,18 +170,6 @@ integrate_ksu_susfs () {
   fi
 }
 
-if [ -z "$KSU" ]; then
- while true; do
-  read -t 10 -p "Integrate KSU? [y/n]: " KSU || true
-  if [[ "$KSU" = "Y" || "$KSU" = "y" || "$KSU" = "N" || "$KSU" = "n" || -z "$KSU" ]]; then
-   [ -n "$KSU" ] && sed -i "s/^KSU=.*/KSU=$KSU/" "${BASH_SOURCE[0]}"
-   break
-  else
-   echo "[?] Unknown answer: ${KSU}"
-  fi
- done
-fi
-
 if [[ "$KSU" = "Y" || "$KSU" = "y" ]]; then
  KSU_DEFCONFIG="${KERNEL_DIR}/arch/${ARCH}/configs/custom.config"
  if [[ "$KERNEL_VERSION" = "3.18" || "$KERNEL_VERSION" = "4.4" ]]; then
@@ -213,15 +201,14 @@ BUILD_OPTIONS=(
  -j"$(nproc)"
  ARCH="${ARCH}"
  CC="ccache ${CLANG_DIR}/bin/clang"
- LD="${CLANG_DIR}/bin/ld.lld"
  CLANG_TRIPLE="${CLANG_TRIPLE}"
 )
 
-if [[ "$VERSION" -gt "4" || ( "$VERSION" -eq "4" && "$PATCHLEVEL" -gt "14" ) ]]; then
- BUILD_OPTIONS+=( LLVM=1 LLVM_IAS=1 )
-fi
+CLANG_VER=$("${CLANG_DIR}/bin/clang" --version | head -n 1 | sed 's/.*version \([0-9]*\).*/\1/')
 
-if [ "$ARCH" = "arm64" ]; then
+if [ "$CLANG_VER" -ge 11 ]; then
+ BUILD_OPTIONS+=( LD="${CLANG_DIR}/bin/ld.lld" LLVM=1 LLVM_IAS=1 )
+elif [ "$ARCH" = "arm64" ]; then
  export CROSS_COMPILE="${GCC_DIR}/aarch64/bin/aarch64-linux-android-"
  export CROSS_COMPILE_ARM32="${GCC_DIR}/arm/bin/arm-linux-androideabi-"
  BUILD_OPTIONS+=( CROSS_COMPILE="${CROSS_COMPILE}" CROSS_COMPILE_ARM32="${CROSS_COMPILE_ARM32}" )
