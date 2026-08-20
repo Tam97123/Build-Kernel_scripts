@@ -146,7 +146,7 @@ fi
 if [ ! -d "$CLANG_DIR" ]; then get_script "get_clang.sh"; fi
 
 # Download GCC if toolchain is required
-if [ "$GCC64" = true ] || [ "$GCC32" = true ]; then
+if [ "$VERSION" -lt "5" && ( "$GCC64" = true ] || [ "$GCC32" = true ) ]; then
  if [ ! -d "$GCC_DIR" ]; then get_script "get_gcc.sh"; fi
 fi
 
@@ -216,9 +216,7 @@ BUILD_OPTIONS=(
  CLANG_TRIPLE="${CLANG_TRIPLE}"
 )
 
-CLANG_VER=$("${CLANG_DIR}/bin/clang" --version | head -n 1 | sed 's/.*version \([0-9]*\).*/\1/')
-
-if [ "$CLANG_VER" -ge 11 ]; then
+if [ "$VERSION" -ge "5" ]; then
  BUILD_OPTIONS+=( LD="${CLANG_DIR}/bin/ld.lld" LLVM=1 LLVM_IAS=1 )
 elif [ "$ARCH" = "arm64" ]; then
  export CROSS_COMPILE="${GCC_DIR}/aarch64/bin/aarch64-linux-android-"
