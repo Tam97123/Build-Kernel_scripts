@@ -1,13 +1,11 @@
 #!/bin/bash
 
-CLANG_NAME="${CLANG_NAME:-$(grep -hoE 'clang-[0-9]+[a-z]*' "$KERNEL_DIR"/build.config.* 2>/dev/null | head -n 1)}"
+CLANG_NAME="${CLANG_NAME:-$(grep -hoE 'clang-r?[0-9]+[a-z]*' "$KERNEL_DIR"/build.config.* 2>/dev/null | head -n 1 || true )}"
 
 if [ -z "$CLANG_NAME" ]; then
  echo "[-] Error: Cannot identify clang name." >&2
  exit 1
 fi
-
-echo "[+] Fetching AOSP clang in history..."
 
 if ! git clone --filter=blob:none --no-checkout https://android.googlesource.com/platform/prebuilts/clang/host/linux-x86 aosp_clang >/dev/null 2>&1; then
  cd $KERNEL_DIR && rm -rf aosp_clang
