@@ -114,6 +114,9 @@ if [ -z "$DEFCONFIG" ]; then
   if check_defconfigs "$user_input"; then
    DEFCONFIG="$DEFCONFIGS_NAMES"
    break
+  else
+   echo "Available defconfigs:"
+   find "${DEFCONFIG_DIR[@]}" -maxdepth 1 -type f \( -name "*_defconfig" -o -name "*.config" \) 2>/dev/null | awk -F'/' '{print "    " $NF}'
   fi
  done
 else
@@ -170,6 +173,17 @@ integrate_ksu_susfs () {
   fi
 }
 
+if [ -z "$KSU" ]; then
+ while true; do
+  read -t 10 -p "Integrate KSU? [y/n]: " KSU || true
+  if [[ "$KSU" = "Y" || "$KSU" = "y" || "$KSU" = "N" || "$KSU" = "n" || -z "$KSU" ]]; then
+   [ -n "$KSU" ] && sed -i "s/^KSU=.*/KSU=$KSU/" "${BASH_SOURCE[0]}"
+   break
+  else
+   echo "[?] Unknown answer: ${KSU}"
+  fi
+ done
+fi
 if [[ "$KSU" = "Y" || "$KSU" = "y" ]]; then
  KSU_DEFCONFIG="${KERNEL_DIR}/arch/${ARCH}/configs/custom.config"
  if [[ "$KERNEL_VERSION" = "3.18" || "$KERNEL_VERSION" = "4.4" ]]; then
