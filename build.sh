@@ -20,12 +20,12 @@ KSU=
 get_script() {
  local script_name="$1"
  echo "[+] Downloading $script_name..."
-  if ! curl -sLO "$REPO_URL/scripts/$script_name"; then
-   echo "[-] Error: Can not download $script_name!" >&2
-   exit 1
-  fi
-  source "$script_name"
-  rm -f "$script_name"
+ if ! curl -sLO "$REPO_URL/scripts/$script_name"; then
+  echo "[-] Error: Can not download $script_name!" >&2
+  exit 1
+ fi
+ source "$script_name"
+ rm -f "$script_name"
 }
 
 # ==============================================================================
@@ -114,6 +114,9 @@ if [ -z "$DEFCONFIG" ]; then
   if check_defconfigs "$user_input"; then
    DEFCONFIG="$DEFCONFIGS_NAMES"
    break
+  else
+   echo "Available defconfigs:"
+   find "${DEFCONFIG_DIR[@]}" -maxdepth 1 -type f \( -name "*_defconfig" -o -name "*.config" \) 2>/dev/null | awk -F'/' '{print "    " $NF}'
   fi
  done
 else
@@ -125,18 +128,16 @@ echo "[+] Using ${DEFCONFIG} as defconfig!"
 # ==============================================================================
 # 4. DETECT ARCHITECTURE
 # ==============================================================================
-if [[ "$VERSION" -le "4" || ( "$VERSION" -eq "4" && "$PATCHLEVEL" -le "14" ) ]]; then
- if [[ "$DEFCONFIGS_PATHS" = *"/arch/arm64/configs/"* ]]; then
-  export ARCH=arm64
-  export CLANG_TRIPLE="aarch64-linux-gnu-"
-  GCC64=true && GCC32=true
-  echo "[+] Kernel's architecture is ARM64!"
- elif [[ "$DEFCONFIGS_PATHS" = *"/arch/arm/configs/"* ]]; then
-  export ARCH=arm
-  export CLANG_TRIPLE="arm-linux-gnueabi-"
-  GCC64=false && GCC32=true
-  echo "[+] Kernel's architecture is ARM!"
- fi
+if [[ "$DEFCONFIGS_PATHS" = *"/arch/arm64/configs/"* ]]; then
+ export ARCH=arm64
+ export CLANG_TRIPLE="aarch64-linux-gnu-"
+ GCC64=true && GCC32=true
+ echo "[+] Kernel's architecture is ARM64!"
+elif [[ "$DEFCONFIGS_PATHS" = *"/arch/arm/configs/"* ]]; then
+ export ARCH=arm
+ export CLANG_TRIPLE="arm-linux-gnueabi-"
+ GCC64=false && GCC32=true
+ echo "[+] Kernel's architecture is ARM!"
 fi
 
 # ==============================================================================
@@ -145,7 +146,7 @@ fi
 if [ ! -d "$CLANG_DIR" ]; then get_script "get_clang.sh"; fi
 
 # Download GCC if toolchain is required
-if [ "$GCC64" = true ] || [ "$GCC32" = true ]; then
+if [ "$VERSION" -lt "5" && ( "$GCC64" = true ] || [ "$GCC32" = true ) ]; then
  if [ ! -d "$GCC_DIR" ]; then get_script "get_gcc.sh"; fi
 fi
 
@@ -181,7 +182,6 @@ if [ -z "$KSU" ]; then
   fi
  done
 fi
-
 if [[ "$KSU" = "Y" || "$KSU" = "y" ]]; then
  KSU_DEFCONFIG="${KERNEL_DIR}/arch/${ARCH}/configs/custom.config"
  if [[ "$KERNEL_VERSION" = "3.18" || "$KERNEL_VERSION" = "4.4" ]]; then
@@ -213,15 +213,12 @@ BUILD_OPTIONS=(
  -j"$(nproc)"
  ARCH="${ARCH}"
  CC="ccache ${CLANG_DIR}/bin/clang"
- LD="${CLANG_DIR}/bin/ld.lld"
  CLANG_TRIPLE="${CLANG_TRIPLE}"
 )
 
-if [[ "$VERSION" -gt "4" || ( "$VERSION" -eq "4" && "$PATCHLEVEL" -gt "14" ) ]]; then
- BUILD_OPTIONS+=( LLVM=1 LLVM_IAS=1 )
-fi
-
-if [ "$ARCH" = "arm64" ]; then
+if [ "$VERSION" -ge "5" ]; then
+ BUILD_OPTIONS+=( LD="${CLANG_DIR}/bin/ld.lld" LLVM=1 LLVM_IAS=1 )
+elif [ "$ARCH" = "arm64" ]; then
  export CROSS_COMPILE="${GCC_DIR}/aarch64/bin/aarch64-linux-android-"
  export CROSS_COMPILE_ARM32="${GCC_DIR}/arm/bin/arm-linux-androideabi-"
  BUILD_OPTIONS+=( CROSS_COMPILE="${CROSS_COMPILE}" CROSS_COMPILE_ARM32="${CROSS_COMPILE_ARM32}" )
