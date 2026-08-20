@@ -20,12 +20,12 @@ KSU=
 get_script() {
  local script_name="$1"
  echo "[+] Downloading $script_name..."
-  if ! curl -sLO "$REPO_URL/scripts/$script_name"; then
-   echo "[-] Error: Can not download $script_name!" >&2
-   exit 1
-  fi
-  source "$script_name"
-  rm -f "$script_name"
+ if ! curl -sLO "$REPO_URL/scripts/$script_name"; then
+  echo "[-] Error: Can not download $script_name!" >&2
+  exit 1
+ fi
+ source "$script_name"
+ rm -f "$script_name"
 }
 
 # ==============================================================================
