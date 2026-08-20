@@ -7,8 +7,6 @@ if [ -z "$CLANG_NAME" ]; then
  exit 1
 fi
 
-echo "[+] Fetching AOSP clang in history..."
-
 if ! git clone --filter=blob:none --no-checkout https://android.googlesource.com/platform/prebuilts/clang/host/linux-x86 aosp_clang >/dev/null 2>&1; then
  cd $KERNEL_DIR && rm -rf aosp_clang
  echo "[-] Error: Cannot fetch AOSP clang in history from Google." >&2
