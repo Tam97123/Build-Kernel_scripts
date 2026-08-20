@@ -128,18 +128,16 @@ echo "[+] Using ${DEFCONFIG} as defconfig!"
 # ==============================================================================
 # 4. DETECT ARCHITECTURE
 # ==============================================================================
-if [[ "$VERSION" -le "4" || ( "$VERSION" -eq "4" && "$PATCHLEVEL" -le "14" ) ]]; then
- if [[ "$DEFCONFIGS_PATHS" = *"/arch/arm64/configs/"* ]]; then
-  export ARCH=arm64
-  export CLANG_TRIPLE="aarch64-linux-gnu-"
-  GCC64=true && GCC32=true
-  echo "[+] Kernel's architecture is ARM64!"
- elif [[ "$DEFCONFIGS_PATHS" = *"/arch/arm/configs/"* ]]; then
-  export ARCH=arm
-  export CLANG_TRIPLE="arm-linux-gnueabi-"
-  GCC64=false && GCC32=true
-  echo "[+] Kernel's architecture is ARM!"
- fi
+if [[ "$DEFCONFIGS_PATHS" = *"/arch/arm64/configs/"* ]]; then
+ export ARCH=arm64
+ export CLANG_TRIPLE="aarch64-linux-gnu-"
+ GCC64=true && GCC32=true
+ echo "[+] Kernel's architecture is ARM64!"
+elif [[ "$DEFCONFIGS_PATHS" = *"/arch/arm/configs/"* ]]; then
+ export ARCH=arm
+ export CLANG_TRIPLE="arm-linux-gnueabi-"
+ GCC64=false && GCC32=true
+ echo "[+] Kernel's architecture is ARM!"
 fi
 
 # ==============================================================================
