@@ -48,28 +48,28 @@ install_dependencies () {
  echo "[+] Detecting OS and installing dependencies..."
  if command -v apt &> /dev/null; then
   echo "[+] Ubuntu/Debian-based system detected, using apt..."
-   sudo apt update && sudo apt install -y git device-tree-compiler lz4 xz-utils zlib1g-dev openjdk-17-jdk gcc g++ python3 python-is-python3 p7zip-full android-sdk-libsparse-utils erofs-utils \
+  sudo apt update > /dev/null 2>&1 && sudo apt install -y git device-tree-compiler lz4 xz-utils zlib1g-dev openjdk-17-jdk gcc g++ python3 python-is-python3 p7zip-full android-sdk-libsparse-utils erofs-utils \
    default-jdk gnupg flex bison gperf build-essential zip curl ccache libc6-dev libncurses-dev libx11-dev libreadline-dev libgl1 libgl1-mesa-dev \
    make sudo bc grep tofrodos python3-markdown libxml2-utils xsltproc libtinfo6 \
-   repo cpio kmod openssl libelf-dev pahole libssl-dev libarchive-tools zstd libyaml-dev --fix-missing
-  wget https://archive.ubuntu.com/ubuntu/pool/universe/n/ncurses/libtinfo5_6.3-2_amd64.deb && sudo dpkg -i libtinfo5_6.3-2_amd64.deb && rm -f libtinfo5_6.3-2_amd64.deb
-  wget https://archive.ubuntu.com/ubuntu/pool/universe/n/ncurses/libncurses5_6.3-2_amd64.deb && sudo dpkg -i libncurses5_6.3-2_amd64.deb && rm -f libncurses5_6.3-2_amd64.deb
+   repo cpio kmod openssl libelf-dev pahole libssl-dev libarchive-tools zstd libyaml-dev --fix-missing > /dev/null 2>&1
+  wget -q https://archive.ubuntu.com/ubuntu/pool/universe/n/ncurses/libtinfo5_6.3-2_amd64.deb && sudo dpkg -i libtinfo5_6.3-2_amd64.deb > /dev/null 2>&1 && rm -f libtinfo5_6.3-2_amd64.deb
+  wget -q https://archive.ubuntu.com/ubuntu/pool/universe/n/ncurses/libncurses5_6.3-2_amd64.deb && sudo dpkg -i libncurses5_6.3-2_amd64.deb > /dev/null 2>&1 && rm -f libncurses5_6.3-2_amd64.deb
  elif command -v dnf &> /dev/null; then
   echo "[+] Fedora/RHEL-based system detected, using dnf..."
-  sudo dnf group install -y "c-development" "development-tools"
+  sudo dnf group install -y "c-development" "development-tools" > /dev/null 2>&1
   sudo dnf install -y dtc lz4 xz zlib-devel java-latest-openjdk-devel python3 \
    p7zip p7zip-plugins android-tools erofs-utils \
    ncurses-devel ccache libX11-devel readline-devel mesa-libGL-devel python3-markdown \
    libxml2 libxslt dos2unix kmod openssl elfutils-libelf-devel dwarves \
-   openssl-devel libarchive zstd rsync libyaml-devel openssl-devel-engine --skip-unavailable
+   openssl-devel libarchive zstd rsync libyaml-devel openssl-devel-engine --skip-unavailable > /dev/null 2>&1
  elif command -v pacman &> /dev/null; then
   echo "[+] Arch-based system detected, using pacman..."
-  sudo pacman -Sy --needed --noconfirm base-devel
+  sudo pacman -Sy --needed --noconfirm base-devel > /dev/null 2>&1
   sudo pacman -S --needed --noconfirm dtc lz4 xz zlib jdk-openjdk python \
    p7zip android-tools erofs-utils \
    ncurses ccache libx11 readline mesa python-markdown \
    libxml2 libxslt dos2unix kmod openssl libelf pahole \
-   libarchive zstd rsync libyam
+   libarchive zstd rsync libyam > /dev/null 2>&1
  else
   echo "[-] Error: Can not determine package manager, please install dependencies manually" >&2
   exit 1
@@ -95,7 +95,8 @@ check_defconfigs() {
    check_defconfigs_name="$check_defconfigs_name $rel_name"
    check_defconfigs_path="$check_defconfigs_path $config_path"
   else
-   echo "[-] Error: No such defconfig name ${config}" >&2
+   echo "[-] Error: No such defconfig name '${config}'! Please try again with available one:" >&2
+   find "${DEFCONFIG_DIR[@]}" -maxdepth 1 -type f \( -name "*_defconfig" -o -name "*.config" \) 2>/dev/null | awk -F'/' '{print $NF}' | sort | column | sed 's/^/    /'
    return 1
   fi
  done
@@ -114,9 +115,6 @@ if [ -z "$DEFCONFIG" ]; then
   if check_defconfigs "$user_input"; then
    DEFCONFIG="$DEFCONFIGS_NAMES"
    break
-  else
-   echo "Available defconfigs:"
-   find "${DEFCONFIG_DIR[@]}" -maxdepth 1 -type f \( -name "*_defconfig" -o -name "*.config" \) 2>/dev/null | awk -F'/' '{print "    " $NF}'
   fi
  done
 else
@@ -268,19 +266,18 @@ elif [ -f "$IMAGE_DIR/Image" ]; then
 fi
 find "${KERNEL_DIR}/out" -type f -name "*.img" 2>/dev/null | while read -r img_file; do cp "$img_file" "$ANYKERNEL3_DIR/"; done
 
-
-if grep -qE "\.ko|Building modules|INSTALL_MOD_PATH" build.log 2>/dev/null && [ -n "$(find "${KERNEL_DIR}/out" -type f -name "*.ko" -print -quit 2>/dev/null)" ]; then
- echo "[+] Copying modules (.ko)..."
- MODULES_PATH="${ANYKERNEL3_DIR}/modules/system/lib/modules"
- mkdir -p "$MODULES_PATH"
- find "${KERNEL_DIR}/out" -type f -name "*.ko" -exec cp {} "$MODULES_PATH/" \;
- sed -i 's/do\.modules=0/do.modules=1/' "${ANYKERNEL3_DIR}/anykernel.sh"
-fi
+#if grep -qE "\.ko|Building modules|INSTALL_MOD_PATH" build.log 2>/dev/null && [ -n "$(find "${KERNEL_DIR}/out" -type f -name "*.ko" -print -quit 2>/dev/null)" ]; then
+# echo "[+] Copying modules (.ko)..."
+# MODULES_PATH="${ANYKERNEL3_DIR}/modules/system/lib/modules"
+# mkdir -p "$MODULES_PATH"
+# find "${KERNEL_DIR}/out" -type f -name "*.ko" -exec cp {} "$MODULES_PATH/" \;
+# sed -i 's/do\.modules=0/do.modules=1/' "${ANYKERNEL3_DIR}/anykernel.sh"
+#fi
 
 # ==============================================================================
 # 10. PACKAGE ANYKERNEL3 ZIP
 # ==============================================================================
-echo "[+] Creating AnyKernel3.zip..."
 cd "$ANYKERNEL3_DIR"
-zip -r9 "${KERNEL_DIR}/${ZIP_NAME}" . -x "*.git*" > /dev/null && rm -rf "$ANYKERNEL3_DIR"
+zip -r9 "${KERNEL_DIR}/${ZIP_NAME}" . -x "*.git*" > /dev/null
+rm -rf "$ANYKERNEL3_DIR"
 echo "[INFO] AnyKernel3 created at ${KERNEL_DIR}/${ZIP_NAME}"
