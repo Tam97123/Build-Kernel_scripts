@@ -12,9 +12,6 @@ if [ ! -d "$KERNEL_DIR/KernelSU" ]; then
   echo "[-] Error: Cannot download KernelSU" >&2
   exit 1
  fi
-elif [ -f "$KERNEL_DIR/KernelSU/kernel/Kbuild" ]; then
- sed -i 's|$(subst ",,$(CONFIG_KSU_FULL_NAME_FORMAT))|%TAG_NAME%-%COMMIT_SHA%-t.me/noforce2pay|' "$KERNEL_DIR/KernelSU/kernel/Kbuild"
- sed -i '/-dirty/d' "$KERNEL_DIR/KernelSU/kernel/Kbuild"
 fi
 
 # ==============================================================================
