@@ -48,28 +48,17 @@ install_dependencies () {
  echo "[+] Detecting OS and installing dependencies..."
  if command -v apt &> /dev/null; then
   echo "[+] Ubuntu/Debian-based system detected, using apt..."
-  sudo apt update > /dev/null 2>&1 && sudo apt install -y git device-tree-compiler lz4 xz-utils zlib1g-dev openjdk-17-jdk gcc g++ python3 python-is-python3 p7zip-full android-sdk-libsparse-utils erofs-utils \
-   default-jdk gnupg flex bison gperf build-essential zip curl ccache libc6-dev libncurses-dev libx11-dev libreadline-dev libgl1 libgl1-mesa-dev \
-   make sudo bc grep tofrodos python3-markdown libxml2-utils xsltproc libtinfo6 \
-   repo cpio kmod openssl libelf-dev pahole libssl-dev libarchive-tools zstd libyaml-dev --fix-missing > /dev/null 2>&1
+  sudo apt update > /dev/null 2>&1 && sudo apt install -y make gcc gcc-c++ bc bison flex pkgconf git curl tar xz zip unzip cpio rsync kmod perl python3 openssl openssl-devel openssl-devel-engine elfutils-libelf-devel dwarves ncurses-devel zlib-devel libyaml-devel lz4 zstd dtc/dev/null 2>&1
   wget -q https://archive.ubuntu.com/ubuntu/pool/universe/n/ncurses/libtinfo5_6.3-2_amd64.deb && sudo dpkg -i libtinfo5_6.3-2_amd64.deb > /dev/null 2>&1 && rm -f libtinfo5_6.3-2_amd64.deb
   wget -q https://archive.ubuntu.com/ubuntu/pool/universe/n/ncurses/libncurses5_6.3-2_amd64.deb && sudo dpkg -i libncurses5_6.3-2_amd64.deb > /dev/null 2>&1 && rm -f libncurses5_6.3-2_amd64.deb
  elif command -v dnf &> /dev/null; then
   echo "[+] Fedora/RHEL-based system detected, using dnf..."
   sudo dnf group install -y "c-development" "development-tools" > /dev/null 2>&1
-  sudo dnf install -y dtc lz4 xz zlib-devel java-latest-openjdk-devel python3 \
-   p7zip p7zip-plugins android-tools erofs-utils \
-   ncurses-devel ccache libX11-devel readline-devel mesa-libGL-devel python3-markdown \
-   libxml2 libxslt dos2unix kmod openssl elfutils-libelf-devel dwarves \
-   openssl-devel libarchive zstd rsync libyaml-devel openssl-devel-engine --skip-unavailable > /dev/null 2>&1
+  sudo dnf install -y build-essential bc bison flex pkg-config git curl tar xz-utils zip unzip cpio rsync kmod perl python3 python-is-python3 libssl-dev libelf-dev pahole libncurses-dev zlib1g-dev libyaml-dev lz4 zstd device-tree-compiler > /dev/null 2>&1
  elif command -v pacman &> /dev/null; then
   echo "[+] Arch-based system detected, using pacman..."
   sudo pacman -Sy --needed --noconfirm base-devel > /dev/null 2>&1
-  sudo pacman -S --needed --noconfirm dtc lz4 xz zlib jdk-openjdk python \
-   p7zip android-tools erofs-utils \
-   ncurses ccache libx11 readline mesa python-markdown \
-   libxml2 libxslt dos2unix kmod openssl libelf pahole \
-   libarchive zstd rsync libyam > /dev/null 2>&1
+  sudo pacman -S --needed --noconfirm dtc lz4 xz zlib jdk-openjdk python p7zip android-tools erofs-utils ncurses ccache libx11 readline mesa python-markdown libxml2 libxslt dos2unix kmod openssl libelf pahole libarchive zstd rsync libyam > /dev/null 2>&1
  else
   echo "[-] Error: Can not determine package manager, please install dependencies manually" >&2
   exit 1
@@ -219,16 +208,17 @@ if [ "$VERSION" -ge "5" ]; then
 elif [ "$ARCH" = "arm64" ]; then
  export CROSS_COMPILE="${GCC_DIR}/aarch64/bin/aarch64-linux-android-"
  export CROSS_COMPILE_ARM32="${GCC_DIR}/arm/bin/arm-linux-androideabi-"
- BUILD_OPTIONS+=( CROSS_COMPILE="${CROSS_COMPILE}" CROSS_COMPILE_ARM32="${CROSS_COMPILE_ARM32}" )
+ BUILD_OPTIONS+=( CROSS_COMPILE="${CROSS_COMPILE}" CROSS_COMPILE_ARM32="${CROSS_COMPILE_ARM32}" HOSTLDLIBS=-lyaml )
 else
  export CROSS_COMPILE="${GCC_DIR}/arm/bin/arm-linux-androideabi-"
- BUILD_OPTIONS+=( CROSS_COMPILE="${CROSS_COMPILE}" )
+ BUILD_OPTIONS+=( CROSS_COMPILE="${CROSS_COMPILE}" HOSTLDLIBS=-lyaml )
 fi
 
 # ==============================================================================
 # 7. BUILDING PROCESS
 # ==============================================================================
 export PATH="${CLANG_DIR}/bin:${PATH}"
+export LD_LIBRARY_PATH="${CLANG}/lib:${CLANG}/lib64:${LD_LIBRARY_PATH:-}"
 
 # Export ccache to speed up building
 export USE_CCACHE=1
