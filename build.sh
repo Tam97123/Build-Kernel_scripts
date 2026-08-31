@@ -112,7 +112,7 @@ elif [ -z "$DEFCONFIG" ]; then
   fi
  done
 else
- [ ! check_defconfigs "$DEFCONFIG" ] && exit 1
+ check_defconfigs "$DEFCONFIG" || exit 1
  DEFCONFIG="$DEFCONFIGS_NAMES"
 fi
 echo "[+] Using ${DEFCONFIG} as defconfig!"
@@ -223,7 +223,7 @@ if [[ "$KSU" == "Y" || "$KSU" == "y" ]]; then
  echo "[+] Integrating KernelSU..."
  [ ! -d "$KERNEL_DIR/KernelSU" ] && curl -LSs "https://raw.githubusercontent.com/ReSukiSU/ReSukiSU/main/kernel/setup.sh" | bash >/dev/null 2>&1 || true
 
- if [[ "$VERSION" -eq "4" || "$KERNEL_VERSION" -eq "5.4" ]]; then
+ if [[ "$VERSION" -eq "4" || "$KERNEL_VERSION" == "5.4" ]]; then
   REJECT_DIR="$KERNEL_DIR/patch_rejects"
   echo "[+] Integrating SUSFS..."
   
@@ -318,7 +318,7 @@ echo "[+] Copying Kernel Image..."
 if [ -f "$IMAGE_DIR/Image.gz-dtb" ]; then
  cp "$IMAGE_DIR/Image.gz-dtb" "$ANYKERNEL3_DIR/"
 else
- cp "$IMAGE_DIR"/Image" "$ANYKERNEL3_DIR/" 2>/dev/null || true
+ cp "$IMAGE_DIR/Image" "$ANYKERNEL3_DIR/" 2>/dev/null || true
 fi
 
 find "${KERNEL_DIR}/out" -type f -name "*.img" 2>/dev/null | while read -r img_file; do cp "$img_file" "$ANYKERNEL3_DIR/"; done
