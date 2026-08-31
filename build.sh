@@ -17,6 +17,24 @@ DEFCONFIG=""
 KSU=""
 
 # ==============================================================================
+# SAMSUNG kernel?
+# ==============================================================================
+SAMSUNG_KERNEL=false
+if [ -n "$(find drivers arch -type d -iname '*samsung*' -print -quit 2>/dev/null)" ]; then
+ SAMSUNG_KERNEL=true
+ echo "[+] Detected SAMSUNG kernel!"
+ if [ -f "README_Kernel.txt" ]; then
+  SAMSUNG_DEFCONFIG=$(grep -m 1 -oE '[a-zA-Z0-9_-]+_defconfig' README_Kernel.txt || true)
+  [ -n "$SAMSUNG_DEFCONFIG" ] && DEFCONFIG="$SAMSUNG_DEFCONFIG"
+ fi
+ if [ -f "build_kernel.sh" ]; then
+  grep -E "^export " build_kernel.sh > .samsung_exports || true
+  source .samsung_exports 2>/dev/null || true
+  rm -f .samsung_exports
+ fi
+fi
+
+# ==============================================================================
 # 1. CHECK KERNEL VERSION
 # ==============================================================================
 if [ -z "$VERSION" ] || [ -z "$PATCHLEVEL" ]; then
@@ -94,7 +112,7 @@ elif [ -z "$DEFCONFIG" ]; then
   fi
  done
 else
- if ! check_defconfigs "$DEFCONFIG"; then exit 1; fi
+ [ ! check_defconfigs "$DEFCONFIG" ] && exit 1
  DEFCONFIG="$DEFCONFIGS_NAMES"
 fi
 echo "[+] Using ${DEFCONFIG} as defconfig!"
@@ -102,7 +120,7 @@ echo "[+] Using ${DEFCONFIG} as defconfig!"
 # ==============================================================================
 # 4. DETECT ARCHITECTURE
 # ==============================================================================
-if [[ "$DEFCONFIGS_PATHS" == *"arch/arm64"* ]]; then
+if [[ "$DEFCONFIGS_PATHS" == *"arm64"* ]]; then
  export ARCH=arm64
  export CLANG_TRIPLE="aarch64-linux-gnu-"
  echo "[+] Kernel's architecture is 64-bits!"
@@ -115,10 +133,9 @@ fi
 # ==============================================================================
 # 5. BUILD OPTIONS & QUIRKS
 # ==============================================================================
-BUILD_OPTIONS=(-C "${KERNEL_DIR}" -j"$(nproc)" ARCH="${ARCH}" HOSTLDLIBS=-lyaml)
+BUILD_OPTIONS=(-C "${KERNEL_DIR}" -j"$(nproc)" ARCH="${ARCH}" )
 
-if [[ "${DEFCONFIG,,}" == *"exynos"* ]]; then
- echo "[+] Samsung Exynos detected. Building in-tree (no O=out)..."
+if [[ "$SAMSUNG_KERNEL" == true && "${DEFCONFIG,,}" == *"exynos"* ]]; then
  IMAGE_DIR="${KERNEL_DIR}/arch/${ARCH}/boot"
 else
  BUILD_OPTIONS+=( O="${KERNEL_DIR}/out" )
@@ -143,7 +160,7 @@ get_gcc() {
 
 if ls "${KERNEL_DIR}"/build.config.* 1> /dev/null 2>&1; then
  echo "[+] Detected AOSP kernel (Using LLVM/Clang)"
- CLANG_NAME="$(grep -hoE 'clang-r?[0-9]+[a-z]*' "$KERNEL_DIR"/build.config.* 2>/dev/null | head -n 1 || true )"
+ CLANG_NAME="$(grep -hoE 'clang-r?[0-9]+[a-z]*' "$KERNEL_DIR"/build.config.* 2>/dev/null | sort | uniq -c | sort -nr | awk '{print $2}' | head -n 1 || true )"
  if [ -n "$CLANG_NAME" ] && [ ! -d "$CLANG_DIR" ]; then
   git clone --filter=blob:none --no-checkout https://android.googlesource.com/platform/prebuilts/clang/host/linux-x86 aosp_clang >/dev/null 2>&1
   cd aosp_clang
@@ -161,9 +178,9 @@ if ls "${KERNEL_DIR}"/build.config.* 1> /dev/null 2>&1; then
  BUILD_OPTIONS+=( CC="ccache ${CLANG_DIR}/bin/clang" CLANG_TRIPLE="${CLANG_TRIPLE}" )
  
  if [ "$VERSION" -ge "5" ]; then
-  BUILD_OPTIONS+=( LD="${CLANG_DIR}/bin/ld.lld" LLVM=1 LLVM_IAS=1 )
+  BUILD_OPTIONS+=( LD="${CLANG_DIR}/bin/ld.lld" LLVM=1 LLVM_IAS=1 HOSTCC=gcc HOSTCXX=g++ )
  else
-  get_gcc # Older AOSP kernels still need GCC for cross-compiling
+  get_gcc
  fi
 else
  echo "[+] Detected OEM kernel (Using GCC)"
@@ -186,39 +203,39 @@ if [ -z "$KSU" ]; then
  done
 fi
 
-if [[ "$KSU" == "Y" || "$KSU" == "y" ]] && [[ "$VERSION" -ge "3" || "$VERSION" -ge "4" || "$KERNEL_VERSION" == "5.4" ]]; then
+if [[ "$KSU" == "Y" || "$KSU" == "y" ]]; then
  echo "[+] Integrating KernelSU..."
- REJECT_DIR="$KERNEL_DIR/patch_rejects"
+ [ ! -d "$KERNEL_DIR/KernelSU" ] && curl -LSs "https://raw.githubusercontent.com/ReSukiSU/ReSukiSU/main/kernel/setup.sh" | bash >/dev/null 2>&1 || true
 
- if [ ! -d "$KERNEL_DIR/KernelSU" ]; then
-  curl -LSs "https://raw.githubusercontent.com/ReSukiSU/ReSukiSU/main/kernel/setup.sh" | bash >/dev/null 2>&1 || true
- fi
- 
- if [ ! -f "$KERNEL_DIR/.ksu_patch" ]; then
-  KSU_PATCH="susfs_inline_hook_patches.sh"
-  curl -sLO "https://raw.githubusercontent.com/JackA1ltman/NonGKI_Kernel_Build_2nd/refs/heads/mainline/Patches/${KSU_PATCH}"
-  bash "$KSU_PATCH" >/dev/null 2>&1 && rm -f "$KSU_PATCH"
+ if [[ "$VERSION" -eq "4" || "$KERNEL_VERSION" -eq "5.4" ]]; then
+  REJECT_DIR="$KERNEL_DIR/patch_rejects"
+  echo "[+] Integrating SUSFS..."
   
-  SUSFS_PATCH="susfs_patch_to_${KERNEL_VERSION}.patch"
-  if curl -sLfO "https://raw.githubusercontent.com/JackA1ltman/NonGKI_Kernel_Build_2nd/refs/heads/mainline/Patches/Patch/${SUSFS_PATCH}"; then
-   patch -p1 < "$SUSFS_PATCH" || true
-   rm -f "$SUSFS_PATCH"
+  if [ ! -f "$KERNEL_DIR/.ksu_patch" ]; then
+   KSU_PATCH="susfs_inline_hook_patches.sh"
+   curl -sLO "https://raw.githubusercontent.com/JackA1ltman/NonGKI_Kernel_Build_2nd/refs/heads/mainline/Patches/${KSU_PATCH}"
+   bash "$KSU_PATCH" >/dev/null 2>&1 && rm -f "$KSU_PATCH"
+   
+   SUSFS_PATCH="susfs_patch_to_${KERNEL_VERSION}.patch"
+   if curl -sLfO "https://raw.githubusercontent.com/JackA1ltman/NonGKI_Kernel_Build_2nd/refs/heads/mainline/Patches/Patch/${SUSFS_PATCH}"; then
+    patch -p1 < "$SUSFS_PATCH" || true
+    rm -f "$SUSFS_PATCH"
+   fi
+   touch .ksu_patch
   fi
-  touch .ksu_patch
- fi
+ 
+  if find "$KERNEL_DIR" -name "*.rej" | grep -q "."; then
+   echo "[!] Warning: Collecting failed patches into $REJECT_DIR"
+   mkdir -p "$REJECT_DIR"
+   find "$KERNEL_DIR" -type f -name "*.rej" | while read -r rej_file; do
+    rel_dir=$(dirname "${rej_file#$KERNEL_DIR/}")
+    mkdir -p "$REJECT_DIR/$rel_dir"
+    mv "$rej_file" "$REJECT_DIR/$rel_dir/"
+   done
+  fi
 
- if find "$KERNEL_DIR" -name "*.rej" | grep -q "."; then
-  echo "[!] Warning: Collecting failed patches into $REJECT_DIR"
-  mkdir -p "$REJECT_DIR"
-  find "$KERNEL_DIR" -type f -name "*.rej" | while read -r rej_file; do
-   rel_dir=$(dirname "${rej_file#$KERNEL_DIR/}")
-   mkdir -p "$REJECT_DIR/$rel_dir"
-   mv "$rej_file" "$REJECT_DIR/$rel_dir/"
-  done
- fi
-
- echo "[+] Appending KernelSU configurations..."
- cat <<EOF > "${KERNEL_DIR}/arch/${ARCH}/configs/custom.config"
+  echo "[+] Appending KernelSU configurations..."
+  cat <<EOF > "${KERNEL_DIR}/arch/${ARCH}/configs/custom.config"
 CONFIG_DEBUG_KERNEL=y
 CONFIG_KALLSYMS=y
 CONFIG_KALLSYMS_ALL=y
@@ -235,7 +252,22 @@ CONFIG_KSU_SUSFS_SPOOF_CMDLINE_OR_BOOTCONFIG=y
 CONFIG_KSU_SUSFS_OPEN_REDIRECT=y
 CONFIG_KSU_SUSFS_SUS_MAP=y
 EOF
- DEFCONFIG="${DEFCONFIG} custom.config"
+  DEFCONFIG="${DEFCONFIG} custom.config"
+ elif [ "$KERNEL_VERSION" == "3.18" ]; then
+  echo "[+] This script does not support SUSFS for kernel 3.18!"
+  echo "[+] Appending KernelSU configurations..."
+  cat <<EOF > "${KERNEL_DIR}/arch/${ARCH}/configs/custom.config"
+CONFIG_DEBUG_KERNEL=y
+CONFIG_KALLSYMS=y
+CONFIG_KALLSYMS_ALL=y
+CONFIG_KSU=y
+CONFIG_KSU_MANUAL_HOOK=y
+EOF
+  DEFCONFIG="${DEFCONFIG} custom.config"
+ else
+  echo [-] This script does not support KernelSU for kernel ${KERNEL_VERSION}. Skipping KernelSU integration!"
+  sed -i "s/^KSU=y.*/KSU=n/" "${BASH_SOURCE[0]}"
+ fi
 elif [[ "$KSU" == "N" || "$KSU" == "n" ]]; then
  echo "[-] Skipping KernelSU integration!"
 fi
@@ -267,10 +299,10 @@ if [ ! -d "$ANYKERNEL3_DIR" ]; then
 fi
 
 echo "[+] Copying Kernel Image..."
-if [ -f "$IMAGE_DIR/Image-gz" ]; then
- cp "$IMAGE_DIR/Image" "$ANYKERNEL3_DIR/"
+if [ -f "$IMAGE_DIR/Image.gz-dtb" ]; then
+ cp "$IMAGE_DIR/Image.gz-dtb" "$ANYKERNEL3_DIR/"
 else
- cp "$IMAGE_DIR"/Image.* "$ANYKERNEL3_DIR/" 2>/dev/null || true
+ cp "$IMAGE_DIR"/Image" "$ANYKERNEL3_DIR/" 2>/dev/null || true
 fi
 
 find "${KERNEL_DIR}/out" -type f -name "*.img" 2>/dev/null | while read -r img_file; do cp "$img_file" "$ANYKERNEL3_DIR/"; done
