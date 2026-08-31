@@ -96,7 +96,7 @@ CONFIG_COUNT=$(echo "$AVAILABLE_CONFIGS" | grep -c . || true)
 
 if [ "$CONFIG_COUNT" -eq 1 ] && [ -z "$DEFCONFIG" ]; then
  DEFCONFIG=$(basename "$AVAILABLE_CONFIGS")
- echo "[+] Only one defconfig found ($DEFCONFIG). Auto-selecting!"
+ echo "[+] Only one defconfig found ($DEFCONFIG)!"
  check_defconfigs "$DEFCONFIG"
  DEFCONFIG="$DEFCONFIGS_NAMES"
 elif [ -z "$DEFCONFIG" ]; then
@@ -117,6 +117,22 @@ else
 fi
 echo "[+] Using ${DEFCONFIG} as defconfig!"
 
+if [ "$SAMSUNG_KERNEL" = true ]; then
+ cat <<EOF > "${KERNEL_DIR}/arch/${ARCH}/configs/samsung-rkp.config"
+# Disable Samsung Securities
+CONFIG_UH=n
+CONFIG_UH_RKP=n
+CONFIG_UH_LKMAUTH=n
+CONFIG_UH_LKM_BLOCK=n
+CONFIG_RKP_CFP_JOPP=n
+CONFIG_RKP_CFP_ROPP=n
+CONFIG_RKP_CFP=n
+CONFIG_SECURITY_DEFEX=n
+CONFIG_PROCA=n
+CONFIG_FIVE=n
+EOF
+ DEFCONFIG="${DEFCONFIG} samsung-rkp.config"
+fi
 # ==============================================================================
 # 4. DETECT ARCHITECTURE
 # ==============================================================================
