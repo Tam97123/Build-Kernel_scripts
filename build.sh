@@ -317,6 +317,8 @@ fi
 echo "[+] Copying Kernel Image..."
 if [ -f "$IMAGE_DIR/Image.gz-dtb" ]; then
  cp "$IMAGE_DIR/Image.gz-dtb" "$ANYKERNEL3_DIR/"
+elif [ -f "$IMAGE_DIR/Image.lz4-dtb" ]; then
+ cp "$IMAGE_DIR/Image.lz4-dtb" "$ANYKERNEL3_DIR/"
 else
  cp "$IMAGE_DIR/Image" "$ANYKERNEL3_DIR/" 2>/dev/null || true
 fi
