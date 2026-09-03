@@ -189,7 +189,7 @@ get_gcc(){
 if ls "${KERNEL_DIR}"/build.config.* 1> /dev/null 2>&1; then
  echo "[+] Detected AOSP kernel (Using LLVM/Clang)"
  if [ ! -d "$CLANG_DIR" ]; then
-  CLANG_NAME="$(grep -hoE 'clang-r?[0-9]+[a-z]*' "$KERNEL_DIR"/build.config.* 2>/dev/null | sort | uniq -c | sort -nr | awk '{print $2}' | head -n 1 || true )"
+  CLANG_NAME="$(grep -hoE 'clang-r?[0-9]+[a-z0-9]*' "$KERNEL_DIR"/build.config.* 2>/dev/null | sort | uniq -c | sort -nr | awk '{print $2}' | head -n 1 || true )"
   if [ -n "$CLANG_NAME" ]; then
    echo "[+] Downloading ${CLANG_NAME}..."
    git clone --filter=blob:none --no-checkout https://android.googlesource.com/platform/prebuilts/clang/host/linux-x86 aosp_clang >/dev/null 2>&1
