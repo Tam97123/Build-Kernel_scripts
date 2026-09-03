@@ -209,13 +209,8 @@ if ls "${KERNEL_DIR}"/build.config.* 1> /dev/null 2>&1; then
 
  export PATH="${CLANG_DIR}/bin:${PATH}"
  export LD_LIBRARY_PATH="${CLANG_DIR}/lib:${CLANG_DIR}/lib64:${LD_LIBRARY_PATH:-}"
- BUILD_OPTIONS+=( CC="ccache ${CLANG_DIR}/bin/clang" CLANG_TRIPLE="${CLANG_TRIPLE}" )
- 
- if [ "$VERSION" -ge "5" ]; then
-  BUILD_OPTIONS+=( LD="${CLANG_DIR}/bin/ld.lld" LLVM=1 LLVM_IAS=1 HOSTCC=gcc HOSTCXX=g++ )
- else
-  get_gcc
- fi
+ [[ "$VERSION" -lt "5" || ( "$VERSION" -ge "5" && "$PATCHLEVEL" -le "10" ) ] && get_gcc
+ BUILD_OPTIONS+=( CC="ccache ${CLANG_DIR}/bin/clang" LD="${CLANG_DIR}/bin/ld.lld" LLVM=1 LLVM_IAS=1 HOSTCC=gcc HOSTCXX=g++ CLANG_TRIPLE="${CLANG_TRIPLE}" )
 else
  echo "[+] Detected OEM kernel (Using GCC)"
  get_gcc
