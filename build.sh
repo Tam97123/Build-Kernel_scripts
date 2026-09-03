@@ -13,14 +13,13 @@ DEFCONFIG_DIR=(
  "$KERNEL_DIR/arch/arm64/configs"
  "$KERNEL_DIR/arch/arm/configs"
 )
-DEFCONFIG=""
-KSU=""
+DEFCONFIG="floral_defconfig"
+KSU=y
 
 # ==============================================================================
 # SAMSUNG kernel?
 # ==============================================================================
-SAMSUNG_KERNEL=false
-if [ -n "$(find drivers arch -type d -iname '*samsung*' -print -quit 2>/dev/null)" ]; then
+if [ -d "security/defex" ] || [ -d "security/rkp" ]; then
  SAMSUNG_KERNEL=true
  echo "[+] Detected SAMSUNG kernel!"
  if [ -f "README_Kernel.txt" ]; then
@@ -32,6 +31,8 @@ if [ -n "$(find drivers arch -type d -iname '*samsung*' -print -quit 2>/dev/null
   source .samsung_exports 2>/dev/null || true
   rm -f .samsung_exports
  fi
+else
+ SAMSUNG_KERNEL=false
 fi
 
 # ==============================================================================
@@ -176,17 +177,23 @@ get_gcc() {
 
 if ls "${KERNEL_DIR}"/build.config.* 1> /dev/null 2>&1; then
  echo "[+] Detected AOSP kernel (Using LLVM/Clang)"
- CLANG_NAME="$(grep -hoE 'clang-r?[0-9]+[a-z]*' "$KERNEL_DIR"/build.config.* 2>/dev/null | sort | uniq -c | sort -nr | awk '{print $2}' | head -n 1 || true )"
- if [ -n "$CLANG_NAME" ] && [ ! -d "$CLANG_DIR" ]; then
-  git clone --filter=blob:none --no-checkout https://android.googlesource.com/platform/prebuilts/clang/host/linux-x86 aosp_clang >/dev/null 2>&1
-  cd aosp_clang
-  CLANG_TARGET=$(git log -n 1 --all --diff-filter=AM --format="%H" -- "$CLANG_NAME")
-  git sparse-checkout init --cone >/dev/null 2>&1
-  git sparse-checkout set "$CLANG_NAME" >/dev/null 2>&1
-  git checkout "$CLANG_TARGET" >/dev/null 2>&1
-  mkdir -p "${CLANG_DIR%/*}"
-  mv "$CLANG_NAME" "$CLANG_DIR"
-  cd "$KERNEL_DIR" && rm -rf aosp_clang
+ if [ ! -d "$CLANG_DIR" ]; then
+  CLANG_NAME="$(grep -hoE 'clang-r?[0-9]+[a-z]*' "$KERNEL_DIR"/build.config.* 2>/dev/null | sort | uniq -c | sort -nr | awk '{print $2}' | head -n 1 || true )"
+  if [ -n "$CLANG_NAME" ]; then
+   echo "[+] Downloading ${CLANG_NAME}..."
+   git clone --filter=blob:none --no-checkout https://android.googlesource.com/platform/prebuilts/clang/host/linux-x86 aosp_clang >/dev/null 2>&1
+   cd aosp_clang
+   CLANG_TARGET=$(git log -n 1 --all --diff-filter=AM --format="%H" -- "$CLANG_NAME")
+   git sparse-checkout init --cone >/dev/null 2>&1
+   git sparse-checkout set "$CLANG_NAME" >/dev/null 2>&1
+   git checkout "$CLANG_TARGET" >/dev/null 2>&1
+   mkdir -p "${CLANG_DIR%/*}"
+   mv "$CLANG_NAME" "$CLANG_DIR"
+   cd "$KERNEL_DIR" && rm -rf aosp_clang
+  else
+   echo "[-] Error: Can not detect clang to use" >&2
+   exit 1
+  fi
  fi
 
  export PATH="${CLANG_DIR}/bin:${PATH}"
@@ -240,14 +247,16 @@ if [[ "$KSU" == "Y" || "$KSU" == "y" ]]; then
    touch .ksu_patch
   fi
  
-  if find "$KERNEL_DIR" -name "*.rej" | grep -q "."; then
-   echo "[!] Warning: Collecting failed patches into $REJECT_DIR"
+  if find "$KERNEL_DIR" -path "$REJECT_DIR" -prune -o -name "*.rej" -print | grep -q "."; then
+   echo "[-] Error: Failed to patch susfs into kernel, please patch manually!" >&2
+   echo "[!] Collecting failed patches into $REJECT_DIR"
    mkdir -p "$REJECT_DIR"
-   find "$KERNEL_DIR" -type f -name "*.rej" | while read -r rej_file; do
+   find "$KERNEL_DIR" -path "$REJECT_DIR" -prune -o -type f -name "*.rej" -print | while read -r rej_file; do
     rel_dir=$(dirname "${rej_file#$KERNEL_DIR/}")
     mkdir -p "$REJECT_DIR/$rel_dir"
     mv "$rej_file" "$REJECT_DIR/$rel_dir/"
    done
+   exit 1
   fi
 
   echo "[+] Appending KernelSU configurations..."
@@ -281,7 +290,7 @@ CONFIG_KSU_MANUAL_HOOK=y
 EOF
   DEFCONFIG="${DEFCONFIG} custom.config"
  else
-  echo [-] This script does not support KernelSU for kernel ${KERNEL_VERSION}. Skipping KernelSU integration!"
+  echo "[-] This script does not support KernelSU for kernel ${KERNEL_VERSION}. Skipping KernelSU integration!"
   sed -i "s/^KSU=y.*/KSU=n/" "${BASH_SOURCE[0]}"
  fi
 elif [[ "$KSU" == "N" || "$KSU" == "n" ]]; then
