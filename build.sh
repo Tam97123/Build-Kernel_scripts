@@ -13,15 +13,16 @@ DEFCONFIG_DIR=(
  "$KERNEL_DIR/arch/arm64/configs"
  "$KERNEL_DIR/arch/arm/configs"
 )
-DEFCONFIG="floral_defconfig"
-KSU=y
+DEFCONFIG=
+KSU=
 
 # ==============================================================================
 # SAMSUNG kernel?
 # ==============================================================================
-if [ -d "security/defex" ] || [ -d "security/rkp" ]; then
+if [ -d "security/defex" ] || [ -d "security/rkp" ] || [ -d "security/proca" ] || [ -d "security/five" ] || [ -d "security/samsung" ]; then
  SAMSUNG_KERNEL=true
  echo "[+] Detected SAMSUNG kernel!"
+ echo "Please create an Issues if it's wrong!"
  if [ -f "README_Kernel.txt" ]; then
   SAMSUNG_DEFCONFIG=$(grep -m 1 -oE '[a-zA-Z0-9_-]+_defconfig' README_Kernel.txt || true)
   [ -n "$SAMSUNG_DEFCONFIG" ] && DEFCONFIG="$SAMSUNG_DEFCONFIG"
@@ -34,7 +35,7 @@ if [ -d "security/defex" ] || [ -d "security/rkp" ]; then
 else
  SAMSUNG_KERNEL=false
 fi
-
+echo "Please create an Issues if it can't detect Samsung kerel!"
 # ==============================================================================
 # 1. CHECK KERNEL VERSION
 # ==============================================================================
@@ -227,14 +228,16 @@ if [ -z "$KSU" ]; then
 fi
 
 if [[ "$KSU" == "Y" || "$KSU" == "y" ]]; then
- echo "[+] Integrating KernelSU..."
- [ ! -d "$KERNEL_DIR/KernelSU" ] && curl -LSs "https://raw.githubusercontent.com/ReSukiSU/ReSukiSU/main/kernel/setup.sh" | bash >/dev/null 2>&1 || true
+ if [ ! -d "$KERNEL_DIR/KernelSU" ]; then
+  echo "[+] Integrating KernelSU..."
+  curl -LSs "https://raw.githubusercontent.com/ReSukiSU/ReSukiSU/main/kernel/setup.sh" | bash >/dev/null 2>&1
+ fi
 
  if [[ "$VERSION" -eq "4" || "$KERNEL_VERSION" == "5.4" ]]; then
   REJECT_DIR="$KERNEL_DIR/patch_rejects"
-  echo "[+] Integrating SUSFS..."
   
   if [ ! -f "$KERNEL_DIR/.ksu_patch" ]; then
+   echo "[+] Integrating SUSFS..."
    KSU_PATCH="susfs_inline_hook_patches.sh"
    curl -sLO "https://raw.githubusercontent.com/JackA1ltman/NonGKI_Kernel_Build_2nd/refs/heads/mainline/Patches/${KSU_PATCH}"
    bash "$KSU_PATCH" >/dev/null 2>&1 && rm -f "$KSU_PATCH"
@@ -258,9 +261,9 @@ if [[ "$KSU" == "Y" || "$KSU" == "y" ]]; then
    done
    exit 1
   fi
-
-  echo "[+] Appending KernelSU configurations..."
-  cat <<EOF > "${KERNEL_DIR}/arch/${ARCH}/configs/custom.config"
+  if [ ! -f "${KERNEL_DIR}/arch/${ARCH}/configs/ksu-susfs.config" ]; then 
+   echo "[+] Appending KernelSU configurations..."
+   cat <<EOF > "${KERNEL_DIR}/arch/${ARCH}/configs/ksu-susfs.config"
 CONFIG_DEBUG_KERNEL=y
 CONFIG_KALLSYMS=y
 CONFIG_KALLSYMS_ALL=y
@@ -277,18 +280,21 @@ CONFIG_KSU_SUSFS_SPOOF_CMDLINE_OR_BOOTCONFIG=y
 CONFIG_KSU_SUSFS_OPEN_REDIRECT=y
 CONFIG_KSU_SUSFS_SUS_MAP=y
 EOF
-  DEFCONFIG="${DEFCONFIG} custom.config"
+  fi
+  DEFCONFIG="${DEFCONFIG} ksu-susfs.config"
  elif [ "$KERNEL_VERSION" == "3.18" ]; then
   echo "[+] This script does not support SUSFS for kernel 3.18!"
-  echo "[+] Appending KernelSU configurations..."
-  cat <<EOF > "${KERNEL_DIR}/arch/${ARCH}/configs/custom.config"
+  if [ ! -f "${KERNEL_DIR}/arch/${ARCH}/configs/ksu.config" ]; then
+   echo "[+] Appending KernelSU configurations..."
+   cat <<EOF > "${KERNEL_DIR}/arch/${ARCH}/configs/ksu.config"
 CONFIG_DEBUG_KERNEL=y
 CONFIG_KALLSYMS=y
 CONFIG_KALLSYMS_ALL=y
 CONFIG_KSU=y
 CONFIG_KSU_MANUAL_HOOK=y
 EOF
-  DEFCONFIG="${DEFCONFIG} custom.config"
+  fi
+  DEFCONFIG="${DEFCONFIG} ksu.config"
  else
   echo "[-] This script does not support KernelSU for kernel ${KERNEL_VERSION}. Skipping KernelSU integration!"
   sed -i "s/^KSU=y.*/KSU=n/" "${BASH_SOURCE[0]}"
@@ -329,7 +335,7 @@ if [ -f "$IMAGE_DIR/Image.gz-dtb" ]; then
 elif [ -f "$IMAGE_DIR/Image.lz4-dtb" ]; then
  cp "$IMAGE_DIR/Image.lz4-dtb" "$ANYKERNEL3_DIR/"
 else
- cp "$IMAGE_DIR/Image" "$ANYKERNEL3_DIR/" 2>/dev/null || true
+ cp "$IMAGE_DIR/Image" "$ANYKERNEL3_DIR/"
 fi
 
 find "${KERNEL_DIR}/out" -type f -name "*.img" 2>/dev/null | while read -r img_file; do cp "$img_file" "$ANYKERNEL3_DIR/"; done
