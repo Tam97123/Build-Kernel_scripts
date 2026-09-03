@@ -130,7 +130,8 @@ fi
 echo "[+] Using ${DEFCONFIG} as defconfig!"
 
 if [ "$SAMSUNG_KERNEL" = true ]; then
- cat <<EOF > "${KERNEL_DIR}/arch/${ARCH}/configs/samsung-rkp.config"
+ if [ ! -f "${KERNEL_DIR}/arch/${ARCH}/configs/samsung-rkp.config" ]; then
+  cat <<EOF > "${KERNEL_DIR}/arch/${ARCH}/configs/samsung-rkp.config"
 # Disable Samsung Securities
 CONFIG_UH=n
 CONFIG_UH_RKP=n
@@ -143,8 +144,32 @@ CONFIG_SECURITY_DEFEX=n
 CONFIG_PROCA=n
 CONFIG_FIVE=n
 EOF
- DEFCONFIG="${DEFCONFIG} samsung-rkp.config"
+ else
+  DEFCONFIG="${DEFCONFIG} samsung-rkp.config"
+ fi
 fi
+
+if [ ! -f .disable_crc_patch ]; then
+ if [ ! -f "${KERNEL_DIR}/arch/${ARCH}/configs/disable-crc-checks.config" ]; then
+  cat <<EOF > "${KERNEL_DIR}/arch/${ARCH}/configs/disable-crc-checks.config"
+#Force Load Kernel Modules
+CONFIG_MODULES=y
+CONFIG_MODULE_FORCE_LOAD=y
+CONFIG_MODULE_UNLOAD=y
+CONFIG_MODULE_FORCE_UNLOAD=y
+CONFIG_MODVERSIONS=y
+CONFIG_MODULE_SRCVERSION_ALL=n
+CONFIG_MODULE_SIG=n
+CONFIG_MODULE_COMPRESS=n
+CONFIG_TRIM_UNUSED_KSYMS=n
+EOF
+ else
+  DEFCONFIG="${DEFCONFIG} disable-crc-checks.config"
+ fi
+ sed -i '/bad_version:/,/return 0;/s/return 0;/return 1;/' kernel/module.c
+ touch .disable_crc_patch
+fi
+
 # ==============================================================================
 # 4. DETECT ARCHITECTURE
 # ==============================================================================
@@ -159,7 +184,7 @@ else
 fi
 
 # ==============================================================================
-# 5. BUILD OPTIONS & QUIRKS
+# 5. BUILD OPTIONS
 # ==============================================================================
 BUILD_OPTIONS=(-C "${KERNEL_DIR}" -j"$(nproc)" ARCH="${ARCH}" )
 
@@ -171,7 +196,7 @@ else
 fi
 
 # ==============================================================================
-# 6. TOOLCHAIN DETECTION & DOWNLOAD
+# 6. DOWNLOAD TOOLCHAIN
 # ==============================================================================
 get_gcc(){
  [ ! -d "$GCC_DIR/aarch64" ] && git clone -q https://github.com/Tam97123/Google-GCC-Android -b aarch64 "$GCC_DIR/aarch64"
