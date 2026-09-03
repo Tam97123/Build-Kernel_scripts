@@ -35,7 +35,7 @@ if [ -d "security/defex" ] || [ -d "security/rkp" ] || [ -d "security/proca" ] |
 else
  SAMSUNG_KERNEL=false
 fi
-echo "Please create an Issues if it can't detect Samsung kerel!"
+echo "Please create an Issues if it can't detect Samsung kernel!"
 # ==============================================================================
 # 1. CHECK KERNEL VERSION
 # ==============================================================================
