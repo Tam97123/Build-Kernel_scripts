@@ -75,11 +75,10 @@ fi
 # ==============================================================================
 # 3. CHECK DEFCONFIG
 # ==============================================================================
-get_available_configs() {
- ls -1R "${DEFCONFIG_DIR[@]}" 2>/dev/null | grep -E 'defconfig$|\.config$|\.fragment$' | sort -u
+get_available_configs(){
+  find "${DEFCONFIG_DIR[@]}" -type f \( -name "*defconfig" -o -name "*.config" -o -name "*.fragment" \) 2>/dev/null | awk -F'/' '{print $NF}' | sort -u
 }
-
-check_defconfigs() {
+check_defconfigs(){
  local input_configs="$1"
  local check_defconfigs_name=""
  local check_defconfigs_path=""
@@ -94,7 +93,7 @@ check_defconfigs() {
    check_defconfigs_path="${check_defconfigs_path} ${config_path}"
   else
    echo "[-] Error: No such defconfig name '${config}'! Please try again with available one(s):" >&2
-   get_available_configs | column | sed 's/^/    /'
+   get_available_configs | column | expand | sed 's/^/    /'
    return 1
   fi
  done
@@ -174,7 +173,7 @@ fi
 # ==============================================================================
 # 6. TOOLCHAIN DETECTION & DOWNLOAD
 # ==============================================================================
-get_gcc() {
+get_gcc(){
  [ ! -d "$GCC_DIR/aarch64" ] && git clone -q https://github.com/Tam97123/Google-GCC-Android -b aarch64 "$GCC_DIR/aarch64"
  [ ! -d "$GCC_DIR/arm" ] && git clone -q https://github.com/Tam97123/Google-GCC-Android -b arm32 "$GCC_DIR/arm"
  if [ "$ARCH" = "arm64" ]; then
