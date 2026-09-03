@@ -9,10 +9,14 @@ KERNEL_VERSION="${VERSION}.${PATCHLEVEL}"
 TOOLCHAIN_DIR="$KERNEL_DIR/toolchain"
 CLANG_DIR="$TOOLCHAIN_DIR/clang"
 GCC_DIR="$TOOLCHAIN_DIR/gcc"
-DEFCONFIG_DIR=(
- "$KERNEL_DIR/arch/arm64/configs"
- "$KERNEL_DIR/arch/arm/configs"
-)
+if [ "$VERSION" -ge "4" ]; then
+ DEFCONFIG_DIR=("$KERNEL_DIR/arch/arm64/configs")
+else
+ DEFCONFIG_DIR=(
+  "$KERNEL_DIR/arch/arm64/configs"
+  "$KERNEL_DIR/arch/arm/configs"
+ )
+fi
 DEFCONFIG=
 KSU=
 
@@ -71,35 +75,42 @@ fi
 # ==============================================================================
 # 3. CHECK DEFCONFIG
 # ==============================================================================
+get_available_configs() {
+ ls -1R "${DEFCONFIG_DIR[@]}" 2>/dev/null | grep -E 'defconfig$|\.config$|\.fragment$' | sort -u
+}
+
 check_defconfigs() {
  local input_configs="$1"
- local check_defconfigs_name=
- local check_defconfigs_path=
+ local check_defconfigs_name=""
+ local check_defconfigs_path=""
+ 
  for config in $input_configs; do
   local config_path=$(find "${DEFCONFIG_DIR[@]}" -type f -name "$config" -print -quit 2>/dev/null)
+  
   if [ -n "$config_path" ]; then
    local rel_name="$config_path"
    for dir in "${DEFCONFIG_DIR[@]}"; do rel_name="${rel_name#$dir/}"; done
-   check_defconfigs_name="$check_defconfigs_name $rel_name"
-   check_defconfigs_path="$check_defconfigs_path $config_path"
+   check_defconfigs_name="${check_defconfigs_name} ${rel_name}"
+   check_defconfigs_path="${check_defconfigs_path} ${config_path}"
   else
-   echo "[-] Error: No such defconfig name '${config}'! Please try again with available one:" >&2
-   find "${DEFCONFIG_DIR[@]}" -maxdepth 1 -type f \( -name "*_defconfig" -o -name "*.config" \) 2>/dev/null | awk -F'/' '{print $NF}' | sort | column | sed 's/^/    /'
+   echo "[-] Error: No such defconfig name '${config}'! Please try again with available one(s):" >&2
+   get_available_configs | column | sed 's/^/    /'
    return 1
   fi
  done
+ 
  DEFCONFIGS_NAMES="${check_defconfigs_name# }"
  DEFCONFIGS_PATHS="${check_defconfigs_path# }"
  return 0
 }
 
-AVAILABLE_CONFIGS=$(find "${DEFCONFIG_DIR[@]}" -maxdepth 1 -type f \( -name "*_defconfig" -o -name "*.config" \) 2>/dev/null || true)
+AVAILABLE_CONFIGS=$(get_available_configs)
 CONFIG_COUNT=$(echo "$AVAILABLE_CONFIGS" | grep -c . || true)
 
 if [ "$CONFIG_COUNT" -eq 1 ] && [ -z "$DEFCONFIG" ]; then
- DEFCONFIG=$(basename "$AVAILABLE_CONFIGS")
- echo "[+] Only one defconfig found ($DEFCONFIG)!"
- check_defconfigs "$DEFCONFIG"
+ DEFCONFIG="$AVAILABLE_CONFIGS"
+ echo "[+] Only one defconfig found ($DEFCONFIG). Auto-selecting!"
+ check_defconfigs "$DEFCONFIG" >/dev/null
  DEFCONFIG="$DEFCONFIGS_NAMES"
 elif [ -z "$DEFCONFIG" ]; then
  while true; do
