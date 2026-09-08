@@ -129,6 +129,20 @@ else
 fi
 echo "[+] Using ${DEFCONFIG} as defconfig!"
 
+# ==============================================================================
+# 4. DETECT ARCHITECTURE
+# ==============================================================================
+if [[ "$DEFCONFIGS_PATHS" == *"arm64"* ]]; then
+ export ARCH=arm64
+ export CLANG_TRIPLE="aarch64-linux-gnu-"
+ echo "[+] Kernel's architecture is 64-bits!"
+else
+ export ARCH=arm
+ export CLANG_TRIPLE="arm-linux-gnueabi-"
+ echo "[+] Kernel's architecture is 32-bits!"
+fi
+
+
 if [ "$SAMSUNG_KERNEL" = true ]; then
  if [ ! -f "${KERNEL_DIR}/arch/${ARCH}/configs/samsung-rkp.config" ]; then
   cat <<EOF > "${KERNEL_DIR}/arch/${ARCH}/configs/samsung-rkp.config"
@@ -149,39 +163,26 @@ EOF
  fi
 fi
 
-if [ ! -f .disable_crc_patch ]; then
- if [ ! -f "${KERNEL_DIR}/arch/${ARCH}/configs/disable-crc-checks.config" ]; then
-  cat <<EOF > "${KERNEL_DIR}/arch/${ARCH}/configs/disable-crc-checks.config"
-#Force Load Kernel Modules
-CONFIG_MODULES=y
-CONFIG_MODULE_FORCE_LOAD=y
-CONFIG_MODULE_UNLOAD=y
-CONFIG_MODULE_FORCE_UNLOAD=y
-CONFIG_MODVERSIONS=y
-CONFIG_MODULE_SRCVERSION_ALL=n
-CONFIG_MODULE_SIG=n
-CONFIG_MODULE_COMPRESS=n
-CONFIG_TRIM_UNUSED_KSYMS=n
-EOF
- else
-  DEFCONFIG="${DEFCONFIG} disable-crc-checks.config"
- fi
- sed -i '/bad_version:/,/return 0;/s/return 0;/return 1;/' kernel/module.c
- touch .disable_crc_patch
-fi
-
-# ==============================================================================
-# 4. DETECT ARCHITECTURE
-# ==============================================================================
-if [[ "$DEFCONFIGS_PATHS" == *"arm64"* ]]; then
- export ARCH=arm64
- export CLANG_TRIPLE="aarch64-linux-gnu-"
- echo "[+] Kernel's architecture is 64-bits!"
-else
- export ARCH=arm
- export CLANG_TRIPLE="arm-linux-gnueabi-"
- echo "[+] Kernel's architecture is 32-bits!"
-fi
+#if [ ! -f .disable_crc_patch ]; then
+# if [ ! -f "${KERNEL_DIR}/arch/${ARCH}/configs/disable-crc-checks.config" ]; then
+#  cat <<EOF > "${KERNEL_DIR}/arch/${ARCH}/configs/disable-crc-checks.config"
+##Force Load Kernel Modules
+#CONFIG_MODULES=y
+#CONFIG_MODULE_FORCE_LOAD=y
+#CONFIG_MODULE_UNLOAD=y
+#CONFIG_MODULE_FORCE_UNLOAD=y
+#CONFIG_MODVERSIONS=y
+#CONFIG_MODULE_SRCVERSION_ALL=n
+#CONFIG_MODULE_SIG=n
+#CONFIG_MODULE_COMPRESS=n
+#CONFIG_TRIM_UNUSED_KSYMS=n
+#EOF
+# else
+#  DEFCONFIG="${DEFCONFIG} disable-crc-checks.config"
+# fi
+# sed -i '/bad_version:/,/return 0;/s/return 0;/return 1;/' kernel/module.c
+# touch .disable_crc_patch
+#fi
 
 # ==============================================================================
 # 5. BUILD OPTIONS
