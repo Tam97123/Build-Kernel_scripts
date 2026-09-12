@@ -85,5 +85,3 @@ if [[ "$VERSION" -eq "4" || "$KERNEL_VERSION" == "5.4" ]]; then
 else
  echo "[-] This script does not support KernelSU for kernel ${KERNEL_VERSION}. Skipping KernelSU integration!"
 fi
-elif [[ "$KSU" == "N" || "$KSU" == "n" ]]; then
- echo "[-] Skipping KernelSU integration!"
