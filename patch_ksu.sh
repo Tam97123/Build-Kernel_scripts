@@ -25,17 +25,16 @@ if [[ "$VERSION" -eq "4" || "$KERNEL_VERSION" == "5.4" ]]; then
  REJECT_DIR="$KERNEL_DIR/patch_rejects"
  
  if [ ! -f "$KERNEL_DIR/.ksu_patch" ]; then
+  SUSFS_PATCH="susfs_patch_to_${KERNEL_VERSION}.patch"
+  curl -LSsfO "https://raw.githubusercontent.com/JackA1ltman/NonGKI_Kernel_Build_2nd/refs/heads/mainline/Patches/Patch/${SUSFS_PATCH}"
+  patch -p1 < "$SUSFS_PATCH" || true
+  rm -f "$SUSFS_PATCH"
+  touch .ksu_patch
+  
   echo "[+] Integrating SUSFS..."
   KSU_PATCH="susfs_inline_hook_patches.sh"
-  curl -sLO "https://raw.githubusercontent.com/JackA1ltman/NonGKI_Kernel_Build_2nd/refs/heads/mainline/Patches/${KSU_PATCH}"
+  curl -LSsfO "https://raw.githubusercontent.com/JackA1ltman/NonGKI_Kernel_Build_2nd/refs/heads/mainline/Patches/${KSU_PATCH}"
   bash "$KSU_PATCH" >/dev/null 2>&1 && rm -f "$KSU_PATCH"
-  
-  SUSFS_PATCH="susfs_patch_to_${KERNEL_VERSION}.patch"
-  if curl -sLfO "https://raw.githubusercontent.com/JackA1ltman/NonGKI_Kernel_Build_2nd/refs/heads/mainline/Patches/Patch/${SUSFS_PATCH}"; then
-   patch -p1 < "$SUSFS_PATCH" || true
-   rm -f "$SUSFS_PATCH"
-  fi
-  touch .ksu_patch
  fi
  
  if find "$KERNEL_DIR" -path "$REJECT_DIR" -prune -o -name "*.rej" -print | grep -q "."; then
